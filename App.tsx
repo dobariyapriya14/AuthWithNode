@@ -11,8 +11,8 @@ import {
 } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import LoginScreen from './src/LoginScreen';
-import ToDoList from './src/ToDoList';
+import LoginScreen from './src/screens/LoginScreen';
+import ToDoList from './src/screens/ToDoList';
 
 const Stack = createNativeStackNavigator();
 
@@ -32,7 +32,7 @@ function App() {
           <Stack.Screen
             name="ToDoList"
             component={ToDoList}
-            options={{ title: 'My Tasks' }}
+            options={{ title: 'My Tasks', headerShown: false }}
           />
         </Stack.Navigator>
       </NavigationContainer>
