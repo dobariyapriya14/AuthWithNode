@@ -14,18 +14,22 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from './src/screens/LoginScreen';
 import ToDoList from './src/screens/ToDoList';
 import { PaperProvider } from 'react-native-paper';
+import { createMMKV } from 'react-native-mmkv';
+
+const storage = createMMKV();
 
 const Stack = createNativeStackNavigator();
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
+  const hasToken = storage.getString("accessToken");
 
   return (
     <SafeAreaProvider>
       <PaperProvider>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <NavigationContainer>
-          <Stack.Navigator initialRouteName="LoginScreen">
+          <Stack.Navigator initialRouteName={hasToken ? "ToDoList" : "LoginScreen"}>
             <Stack.Screen
               name="LoginScreen"
               component={LoginScreen}

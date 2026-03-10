@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, Platform, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, FlatList, Platform, StyleSheet, Alert, TouchableOpacity, Linking, Switch } from 'react-native';
 import { Text, TextInput, Button, Card, ActivityIndicator, FAB, Portal, Modal } from 'react-native-paper';
 import { createMMKV } from 'react-native-mmkv';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
+import DocumentPicker from 'react-native-document-picker';
 import { API_URL, endPoints } from '../constants/apiCilents';
 
 const storage = createMMKV();
@@ -14,6 +15,8 @@ interface Todo {
     completed?: boolean;
     description?: string;
     image?: string;
+    pdf?: string;
+    mode?: boolean;
 }
 
 const ToDoList = ({ navigation }: any) => {
@@ -23,10 +26,15 @@ const ToDoList = ({ navigation }: any) => {
     const [newTitle, setNewTitle] = useState('');
     const [newDescription, setNewDescription] = useState('');
     const [newImage, setNewImage] = useState<any>(null);
+    const [newPdf, setNewPdf] = useState<any>(null);
     const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const [newMode, setNewMode] = useState<boolean>(true);
 
     useEffect(() => {
-        fetchTodos();
+        fetchTodos(1);
     }, []);
 
     const logout = async () => {
@@ -49,13 +57,17 @@ const ToDoList = ({ navigation }: any) => {
         }
     };
 
-    const fetchTodos = async () => {
-        setLoading(true);
+    const fetchTodos = async (pageNumber: number = 1) => {
+        if (pageNumber === 1) {
+            setLoading(true);
+        } else {
+            setLoadingMore(true);
+        }
         try {
             const token = storage.getString("accessToken"); // Changed from AsyncStorage.getItem
             // Adding cache buster timestamp to prevent aggressive caching on Android
             const timestamp = new Date().getTime();
-            const res = await fetch(`${API_URL}${endPoints.todos}?t=${timestamp}`, {
+            const res = await fetch(`${API_URL}${endPoints.todos}?page=${pageNumber}&t=${timestamp}`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
@@ -87,7 +99,19 @@ const ToDoList = ({ navigation }: any) => {
                 }
 
                 console.log("Setting todos state to:", todosArray);
-                setTodos(todosArray);
+                if (pageNumber === 1) {
+                    setTodos(todosArray);
+                } else {
+                    setTodos(prev => [...prev, ...todosArray]);
+                }
+                setPage(pageNumber);
+
+                // If the array is empty, we reached the end
+                if (todosArray.length === 0) {
+                    setHasMore(false);
+                } else {
+                    if (pageNumber === 1) setHasMore(true);
+                }
             } else {
                 console.log("Failed to fetch todos:", data);
             }
@@ -95,6 +119,13 @@ const ToDoList = ({ navigation }: any) => {
             console.log("API ERROR:", error);
         } finally {
             setLoading(false);
+            setLoadingMore(false);
+        }
+    };
+
+    const loadMoreTodos = () => {
+        if (!loadingMore && !loading && hasMore) {
+            fetchTodos(page + 1);
         }
     };
 
@@ -103,6 +134,8 @@ const ToDoList = ({ navigation }: any) => {
         setNewTitle('');
         setNewDescription('');
         setNewImage(null);
+        setNewPdf(null);
+        setNewMode(true);
         setIsAddModalVisible(true);
     };
 
@@ -112,6 +145,8 @@ const ToDoList = ({ navigation }: any) => {
         setNewTitle('');
         setNewDescription('');
         setNewImage(null);
+        setNewPdf(null);
+        setNewMode(true);
     };
 
     const processImageResult = (result: any) => {
@@ -153,6 +188,22 @@ const ToDoList = ({ navigation }: any) => {
         );
     };
 
+    const handlePdfUpload = async () => {
+        try {
+            const res = await DocumentPicker.pickSingle({
+                type: [DocumentPicker.types.pdf],
+            });
+            setNewPdf(res);
+        } catch (err) {
+            if (DocumentPicker.isCancel(err)) {
+                console.log('User cancelled document picker');
+            } else {
+                console.log('DocumentPicker Error: ', err);
+                Alert.alert('Error', 'Failed to pick PDF');
+            }
+        }
+    };
+
     const saveTodo = async () => {
         if (!newTitle.trim()) {
             Alert.alert("Validation", "Title is required");
@@ -167,6 +218,7 @@ const ToDoList = ({ navigation }: any) => {
 
             const formData = new FormData();
             formData.append("title", newTitle);
+            formData.append("mode", String(newMode));
             if (newDescription) {
                 formData.append("description", newDescription);
             }
@@ -178,6 +230,16 @@ const ToDoList = ({ navigation }: any) => {
                 } as any);
             } else if (typeof newImage === 'string') {
                 formData.append("image", newImage);
+            }
+
+            if (newPdf && newPdf.uri) {
+                formData.append("pdf", {
+                    uri: newPdf.uri,
+                    type: newPdf.type || "application/pdf",
+                    name: newPdf.name || "upload.pdf"
+                } as any);
+            } else if (typeof newPdf === 'string') {
+                formData.append("pdf", newPdf);
             }
 
             const res = await fetch(url, {
@@ -198,7 +260,7 @@ const ToDoList = ({ navigation }: any) => {
 
             if (res.ok) {
                 hideModal();
-                fetchTodos();
+                fetchTodos(1);
             } else {
                 Alert.alert("Error", data?.message || "Failed to save todo");
             }
@@ -224,7 +286,7 @@ const ToDoList = ({ navigation }: any) => {
 
             if (res.ok) {
                 // Remove from ui immediately or fetch again
-                fetchTodos();
+                fetchTodos(1);
             } else {
                 const text = await res.text();
                 let data: any = {};
@@ -272,25 +334,54 @@ const ToDoList = ({ navigation }: any) => {
                     <Button
                         mode="outlined"
                         onPress={handleImageUpload}
-                        style={{ marginBottom: 16 }}
+                        style={{ marginBottom: 12 }}
                         icon={({ size, color }) => <Text style={{ fontSize: 20, color }}>📷</Text>}
                     >
                         {newImage ? "Image Selected" : "Upload Image"}
                     </Button>
 
-                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-                        <Button onPress={hideModal} style={{ marginRight: 8 }}>Cancel</Button>
-                        <Button mode="contained" onPress={saveTodo}>{editingTodoId ? "Save" : "Add"}</Button>
+                    <Button
+                        mode="outlined"
+                        onPress={handlePdfUpload}
+                        style={{ marginBottom: 16 }}
+                        icon={({ size, color }) => <Text style={{ fontSize: 20, color }}>📄</Text>}
+                    >
+                        {newPdf ? "PDF Selected" : "Upload PDF"}
+                    </Button>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Switch
+                                value={newMode}
+                                onValueChange={setNewMode}
+                                trackColor={{ false: "#767577", true: "#81b0ff" }}
+                                thumbColor={newMode ? "#6200ee" : "#f4f3f4"}
+                            />
+                            <Text style={{ marginLeft: 8 }} onPress={() => setNewMode(!newMode)}>
+                                {newMode ? 'Online' : 'Offline'}
+                            </Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                            <Button onPress={hideModal} style={{ marginRight: 8 }}>Cancel</Button>
+                            <Button mode="contained" onPress={saveTodo}>{editingTodoId ? "Save" : "Add"}</Button>
+                        </View>
                     </View>
                 </Modal>
             </Portal>
 
-            {loading ? (
+            {loading && page === 1 ? (
                 <ActivityIndicator size="large" style={{ marginTop: 20 }} />
             ) : (
                 <FlatList
                     data={todos}
                     keyExtractor={(item, index) => item._id?.toString() || item.id?.toString() || index.toString()}
+                    onEndReached={loadMoreTodos}
+                    onEndReachedThreshold={0.5}
+                    contentContainerStyle={{ paddingBottom: 80 }}
+                    ListFooterComponent={
+                        loadingMore ? <ActivityIndicator style={{ margin: 10 }} /> :
+                            (!hasMore && todos.length > 0) ? <Text style={{ textAlign: 'center', margin: 10, color: 'gray' }}>No more tasks</Text> : null
+                    }
                     renderItem={({ item }) => (
                         <Card style={styles.card}>
                             <Card.Title
@@ -303,6 +394,8 @@ const ToDoList = ({ navigation }: any) => {
                                                 setNewTitle(item.title || item.name || "");
                                                 setNewDescription(item.description || "");
                                                 setNewImage(item.image || "");
+                                                setNewPdf(item.pdf || "");
+                                                setNewMode(item.mode !== undefined ? item.mode : true);
                                                 setIsAddModalVisible(true);
                                             }}
                                             style={{ padding: 10, justifyContent: 'center' }}
@@ -328,6 +421,16 @@ const ToDoList = ({ navigation }: any) => {
                                     source={{ uri: Platform.OS === 'android' ? item.image.replace('localhost', '10.0.2.2') : item.image }}
                                     style={{ marginTop: 10, borderBottomLeftRadius: 10, borderBottomRightRadius: 10 }}
                                 />
+                            )}
+                            {!!item.pdf && (
+                                <Card.Actions>
+                                    <Button
+                                        icon={({ size, color }) => <Text style={{ fontSize: 20, color }}>📄</Text>}
+                                        onPress={() => Linking.openURL(Platform.OS === 'android' ? item.pdf!.replace('localhost', '10.0.2.2') : item.pdf!)}
+                                    >
+                                        View PDF
+                                    </Button>
+                                </Card.Actions>
                             )}
                         </Card>
                     )}
