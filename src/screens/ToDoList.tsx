@@ -77,7 +77,6 @@ const ToDoList = ({ navigation }: any) => {
             });
 
             const text = await res.text();
-            console.log("fetchTodos raw response:", text);
 
             let data: any = {};
             try {

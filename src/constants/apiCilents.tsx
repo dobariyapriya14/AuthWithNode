@@ -9,5 +9,7 @@ export const endPoints = {
     login: "auth/login",
     signup: "auth/signup",
     logout: "auth/logout",
-    todos: "todos"
+    todos: "todos",
+    sendOtp: "auth/send-otp",
+    verifyOtp: "auth/verify-otp"
 }

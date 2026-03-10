@@ -8,12 +8,15 @@ const storage = createMMKV();
 
 const LoginScreen = ({ navigation }: any) => {
     const [isLogin, setIsLogin] = React.useState(true);
+    const [isOtpMode, setIsOtpMode] = React.useState(false);
+    const [otpSent, setOtpSent] = React.useState(false);
+    const [otp, setOtp] = React.useState('');
     const [name, setName] = React.useState('');
     const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [showPassword, setShowPassword] = React.useState(false);
 
-    const login = async () => {
+    const handleLogin = async () => {
         try {
             const res = await fetch(`${API_URL}${endPoints.login}`, {
                 method: "POST",
@@ -24,8 +27,6 @@ const LoginScreen = ({ navigation }: any) => {
             });
 
             const data = await res.json();
-
-            console.log("LOGIN RESPONSE:", data);
 
             if (!res.ok) {
                 Alert.alert("Login Failed", data.message || "Something went wrong");
@@ -38,7 +39,6 @@ const LoginScreen = ({ navigation }: any) => {
                 navigation.navigate('ToDoList');
             } else {
                 // Try logging the accessToken if it's nested somewhere else, e.g. data.data.accessToken
-                console.log("accessToken not found in response! Data:", data);
                 if (data?.data?.accessToken) {
                     storage.set("accessToken", data.data.accessToken);
                     navigation.navigate('ToDoList');
@@ -47,12 +47,11 @@ const LoginScreen = ({ navigation }: any) => {
                 }
             }
         } catch (error) {
-            console.log("LOGIN ERROR:", error);
             Alert.alert("Error", "Network error");
         }
     };
 
-    const signup = async () => {
+    const handleSignup = async () => {
         try {
             const res = await fetch(`${API_URL}${endPoints.signup}`, {
                 method: "POST",
@@ -70,7 +69,6 @@ const LoginScreen = ({ navigation }: any) => {
 
             try {
                 const data = JSON.parse(text);
-                console.log("SIGNUP SUCCESS:", data);
                 if (res.ok) {
                     Alert.alert("Success", "Account created! Please login.");
                     setIsLogin(true); // Switch to login mode
@@ -78,11 +76,9 @@ const LoginScreen = ({ navigation }: any) => {
                     Alert.alert("Signup Failed", data.message || "Something went wrong");
                 }
             } catch (e) {
-                console.error("JSON error", text);
                 Alert.alert("Error", "Invalid server response");
             }
         } catch (error) {
-            console.log("SIGNUP ERROR:", error);
             Alert.alert("Error", "Network error");
         }
     };
@@ -94,13 +90,68 @@ const LoginScreen = ({ navigation }: any) => {
             .catch(err => console.log("API ERROR:", err));
     }, []);
 
+    const handleSendOtp = async () => {
+        try {
+            const res = await fetch(`${API_URL}${endPoints.sendOtp}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email }),
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                // Auto-fill OTP if it's returned by the API
+                if (data?.otp) {
+                    setOtp(String(data.otp));
+                }
+                Alert.alert("Success", `OTP Sent: ${data?.otp || 'Check your email'}`);
+                setOtpSent(true);
+            } else {
+                Alert.alert("Error", data.message || "Failed to send OTP");
+            }
+        } catch (error) {
+            console.log("SEND OTP ERROR:", error);
+            Alert.alert("Error", "Network error");
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        try {
+            const res = await fetch(`${API_URL}${endPoints.verifyOtp}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, otp }),
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                // Same logic as login to set token and navigate
+                if (data && data.accessToken) {
+                    storage.set("accessToken", data.accessToken);
+                    navigation.navigate('ToDoList');
+                } else if (data?.data?.accessToken) {
+                    storage.set("accessToken", data.data.accessToken);
+                    navigation.navigate('ToDoList');
+                } else {
+                    Alert.alert("Success", "Verified successfully!");
+                    navigation.navigate('ToDoList'); // Assuming success means logged in
+                }
+            } else {
+                Alert.alert("Error", data.message || "Invalid OTP");
+            }
+        } catch (error) {
+            console.log("VERIFY OTP ERROR:", error);
+            Alert.alert("Error", "Network error");
+        }
+    };
+
     return (
         <View style={{ flex: 1, justifyContent: 'center', padding: 20 }}>
             <Text variant="headlineMedium" style={{ textAlign: 'center', marginBottom: 24, fontWeight: 'bold' }}>
-                {isLogin ? "Welcome Back" : "Create Account"}
+                {isOtpMode ? "OTP Login" : (isLogin ? "Welcome Back" : "Create Account")}
             </Text>
 
-            {!isLogin && (
+            {!isLogin && !isOtpMode && (
                 <TextInput
                     label="Name"
                     value={name}
@@ -118,33 +169,62 @@ const LoginScreen = ({ navigation }: any) => {
                 style={{ marginBottom: 16 }}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                disabled={isOtpMode && otpSent}
             />
 
-            <TextInput
-                label="Password"
-                value={password}
-                onChangeText={setPassword}
-                mode="outlined"
-                secureTextEntry={!showPassword}
-                style={{ marginBottom: 24 }}
-            />
+            {!isOtpMode && (
+                <TextInput
+                    label="Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    mode="outlined"
+                    secureTextEntry={!showPassword}
+                    style={{ marginBottom: 24 }}
+                />
+            )}
+
+            {isOtpMode && otpSent && (
+                <TextInput
+                    label="Enter OTP"
+                    value={otp}
+                    onChangeText={setOtp}
+                    mode="outlined"
+                    style={{ marginBottom: 24 }}
+                    keyboardType="numeric"
+                />
+            )}
 
             <Button
                 mode="contained"
-                onPress={() => isLogin ? login() : signup()}
+                onPress={() => isOtpMode ? (otpSent ? handleVerifyOtp() : handleSendOtp()) : (isLogin ? handleLogin() : handleSignup())}
                 contentStyle={{ height: 48 }}
                 style={{ borderRadius: 8 }}
             >
-                {isLogin ? "Login" : "Sign Up"}
+                {isOtpMode ? (otpSent ? "Verify OTP" : "Send OTP") : (isLogin ? "Login" : "Sign Up")}
             </Button>
 
-            <Button
-                mode="text"
-                onPress={() => setIsLogin(!isLogin)}
-                style={{ marginTop: 16 }}
-            >
-                {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login"}
-            </Button>
+            {!isOtpMode && (
+                <Button
+                    mode="text"
+                    onPress={() => setIsLogin(!isLogin)}
+                    style={{ marginTop: 16 }}
+                >
+                    {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login"}
+                </Button>
+            )}
+
+            {isLogin && (
+                <Button
+                    mode="text"
+                    onPress={() => {
+                        setIsOtpMode(!isOtpMode);
+                        setOtpSent(false);
+                    }}
+                    style={{ marginTop: isOtpMode ? 16 : 8 }}
+                >
+                    {isOtpMode ? "Login with Password instead" : "Login with OTP"}
+                </Button>
+            )}
         </View>
     );
 };
