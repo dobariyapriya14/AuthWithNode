@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Alert, View } from 'react-native';
 import { Button, Text, TextInput } from 'react-native-paper';
 import { createMMKV } from 'react-native-mmkv';
-import { API_URL, endPoints } from '../constants/apiCilents';
+import { apiService } from '../services/apiService';
 
 const storage = createMMKV();
 
@@ -15,132 +15,74 @@ const LoginScreen = ({ navigation }: any) => {
     const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
 
-    React.useEffect(() => {
-        fetch("http://10.0.2.2:3000/hello")
-            .then(res => res.json())
-            .then(data => console.log("API DATA:", data))
-            .catch(err => console.log("API ERROR:", err));
-    }, []);
-
     const handleLogin = async () => {
         try {
-            const res = await fetch(`${API_URL}${endPoints.login}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ email, password }),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                Alert.alert("Login Failed", data.message || "Something went wrong");
-                return;
-            }
+            const res = await apiService.login({ email, password });
+            const data = res.data;
 
             // Save accessToken if it exists in the response
             if (data && data.accessToken) {
                 storage.set("accessToken", data.accessToken);
                 navigation.navigate('ToDoList');
+            } else if (data?.data?.accessToken) {
+                storage.set("accessToken", data.data.accessToken);
+                navigation.navigate('ToDoList');
             } else {
-                // Try logging the accessToken if it's nested somewhere else, e.g. data.data.accessToken
-                if (data?.data?.accessToken) {
-                    storage.set("accessToken", data.data.accessToken);
-                    navigation.navigate('');
-                } else {
-                    Alert.alert("Login Error", "accessToken was not received from server");
-                }
+                Alert.alert("Login Error", "accessToken was not received from server");
             }
-        } catch (error) {
-            Alert.alert("Error", "Network error");
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.message || "Something went wrong";
+            Alert.alert("Login Failed", errorMsg);
         }
     };
 
     const handleSignup = async () => {
         try {
-            const res = await fetch(`${API_URL}${endPoints.signup}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    name,
-                    email,
-                    password,
-                }),
-            });
-
-            const text = await res.text();
-
-            try {
-                const data = JSON.parse(text);
-                if (res.ok) {
-                    Alert.alert("Success", "Account created! Please login.");
-                    setIsLogin(true); // Switch to login mode
-                } else {
-                    Alert.alert("Signup Failed", data.message || "Something went wrong");
-                }
-            } catch (e) {
-                Alert.alert("Error", "Invalid server response");
-            }
-        } catch (error) {
-            Alert.alert("Error", "Network error");
+            const res = await apiService.signup({ name, email, password });
+            Alert.alert("Success", "Account created! Please login.");
+            setIsLogin(true); // Switch to login mode
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.message || "Something went wrong";
+            Alert.alert("Signup Failed", errorMsg);
         }
     };
 
     const handleSendOtp = async () => {
         try {
-            const res = await fetch(`${API_URL}${endPoints.sendOtp}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email }),
-            });
-            const data = await res.json();
+            const res = await apiService.sendOtp({ email });
+            const data = res.data;
 
-            if (res.ok) {
-                // Auto-fill OTP if it's returned by the API
-                if (data?.otp) {
-                    setOtp(String(data.otp));
-                }
-                Alert.alert("Success", `OTP Sent: ${data?.otp || 'Check your email'}`);
-                setOtpSent(true);
-            } else {
-                Alert.alert("Error", data.message || "Failed to send OTP");
+            // Auto-fill OTP if it's returned by the API
+            if (data?.otp) {
+                setOtp(String(data.otp));
             }
-        } catch (error) {
-            console.log("SEND OTP ERROR:", error);
-            Alert.alert("Error", "Network error");
+            Alert.alert("Success", `OTP Sent: ${data?.otp || 'Check your email'}`);
+            setOtpSent(true);
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.message || "Failed to send OTP";
+            Alert.alert("Error", errorMsg);
         }
     };
 
     const handleVerifyOtp = async () => {
         try {
-            const res = await fetch(`${API_URL}${endPoints.verifyOtp}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, otp }),
-            });
-            const data = await res.json();
+            const res = await apiService.verifyOtp({ email, otp });
+            const data = res.data;
 
-            if (res.ok) {
-                // Same logic as login to set token and navigate
-                if (data && data.accessToken) {
-                    storage.set("accessToken", data.accessToken);
-                    navigation.navigate('ToDoList');
-                } else if (data?.data?.accessToken) {
-                    storage.set("accessToken", data.data.accessToken);
-                    navigation.navigate('ToDoList');
-                } else {
-                    Alert.alert("Success", "Verified successfully!");
-                    navigation.navigate('ToDoList'); // Assuming success means logged in
-                }
+            // Same logic as login to set token and navigate
+            if (data && data.accessToken) {
+                storage.set("accessToken", data.accessToken);
+                navigation.navigate('ToDoList');
+            } else if (data?.data?.accessToken) {
+                storage.set("accessToken", data.data.accessToken);
+                navigation.navigate('ToDoList');
             } else {
-                Alert.alert("Error", data.message || "Invalid OTP");
+                Alert.alert("Success", "Verified successfully!");
+                navigation.navigate('ToDoList'); // Assuming success means logged in
             }
-        } catch (error) {
-            console.log("VERIFY OTP ERROR:", error);
-            Alert.alert("Error", "Network error");
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.message || "Invalid OTP";
+            Alert.alert("Error", errorMsg);
         }
     };
 

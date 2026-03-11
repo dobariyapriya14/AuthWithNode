@@ -4,7 +4,7 @@ import { Text, TextInput, Button, Card, ActivityIndicator, FAB, Portal, Modal } 
 import { createMMKV } from 'react-native-mmkv';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import DocumentPicker from 'react-native-document-picker';
-import { API_URL, endPoints } from '../constants/apiCilents';
+import { apiService } from '../services/apiService';
 
 const storage = createMMKV();
 interface Todo {
@@ -41,13 +41,7 @@ const ToDoList = ({ navigation }: any) => {
         try {
             const token = storage.getString("accessToken");
             if (token) {
-                await fetch(`${API_URL}${endPoints.logout}`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    }
-                });
+                await apiService.logout();
             }
         } catch (error) {
             console.log("LOGOUT ERROR:", error);
@@ -64,57 +58,35 @@ const ToDoList = ({ navigation }: any) => {
             setLoadingMore(true);
         }
         try {
-            const token = storage.getString("accessToken"); // Changed from AsyncStorage.getItem
             // Adding cache buster timestamp to prevent aggressive caching on Android
-            const timestamp = new Date().getTime();
-            const res = await fetch(`${API_URL}${endPoints.todos}?page=${pageNumber}&t=${timestamp}`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Cache-Control": "no-cache",
-                    "Authorization": `Bearer ${token}`
-                }
-            });
+            const res = await apiService.getTodos(pageNumber);
+            const data = res.data;
 
-            const text = await res.text();
-
-            let data: any = {};
-            try {
-                data = JSON.parse(text);
-            } catch (e) {
-                console.log("fetchTodos Response is not JSON:", text);
+            let todosArray = [];
+            if (Array.isArray(data)) {
+                todosArray = data;
+            } else if (data && Array.isArray(data.todos)) {
+                todosArray = data.todos;
+            } else if (data && Array.isArray(data.data)) {
+                todosArray = data.data;
             }
 
-            if (res.ok) {
-
-                let todosArray = [];
-                if (Array.isArray(data)) {
-                    todosArray = data;
-                } else if (data && Array.isArray(data.todos)) {
-                    todosArray = data.todos;
-                } else if (data && Array.isArray(data.data)) {
-                    todosArray = data.data;
-                }
-
-                console.log("Setting todos state to:", todosArray);
-                if (pageNumber === 1) {
-                    setTodos(todosArray);
-                } else {
-                    setTodos(prev => [...prev, ...todosArray]);
-                }
-                setPage(pageNumber);
-
-                // If the array is empty, we reached the end
-                if (todosArray.length === 0) {
-                    setHasMore(false);
-                } else {
-                    if (pageNumber === 1) setHasMore(true);
-                }
+            console.log("Setting todos state to:", todosArray);
+            if (pageNumber === 1) {
+                setTodos(todosArray);
             } else {
-                console.log("Failed to fetch todos:", data);
+                setTodos(prev => [...prev, ...todosArray]);
             }
-        } catch (error) {
-            console.log("API ERROR:", error);
+            setPage(pageNumber);
+
+            // If the array is empty, we reached the end
+            if (todosArray.length === 0) {
+                setHasMore(false);
+            } else {
+                if (pageNumber === 1) setHasMore(true);
+            }
+        } catch (error: any) {
+            console.log("API ERROR:", error?.response?.data || error.message);
         } finally {
             setLoading(false);
             setLoadingMore(false);
@@ -208,12 +180,6 @@ const ToDoList = ({ navigation }: any) => {
             return;
         }
         try {
-            const token = storage.getString("accessToken");
-            const url = editingTodoId
-                ? `${API_URL}${endPoints.todos}/${editingTodoId}`
-                : `${API_URL}${endPoints.todos}`;
-            const method = editingTodoId ? "PUT" : "POST";
-
             const formData = new FormData();
             formData.append("title", newTitle);
             formData.append("mode", String(newMode));
@@ -240,31 +206,14 @@ const ToDoList = ({ navigation }: any) => {
                 formData.append("pdf", newPdf);
             }
 
-            const res = await fetch(url, {
-                method,
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                },
-                body: formData
-            });
-            const text = await res.text();
-
-            let data: any = {};
-            try {
-                data = JSON.parse(text);
-            } catch (e) {
-                console.log("Response is not JSON:", text);
-            }
-
-            if (res.ok) {
-                hideModal();
-                fetchTodos(1);
-            } else {
-                Alert.alert("Error", data?.message || "Failed to save todo");
-            }
-
-            console.log('dataa', data)
+            const res = await apiService.saveTodo(formData, editingTodoId);
+            const data = res.data;
+            hideModal();
+            fetchTodos(1);
+            console.log('dataa', data);
         } catch (error: any) {
+            const data = error.response?.data;
+            Alert.alert("Error", data?.message || "Failed to save todo");
             console.log("SAVE ERROR:", error?.message || error);
         }
     };
@@ -272,27 +221,13 @@ const ToDoList = ({ navigation }: any) => {
     const deleteTodo = async (id: string | undefined) => {
         if (!id) return;
         try {
-            const token = storage.getString("accessToken");
-            const res = await fetch(`${API_URL}${endPoints.todos}/${id}`, {
-                method: "DELETE",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                }
-            });
-
-            if (res.ok) {
-                // Remove from ui immediately or fetch again
-                fetchTodos(1);
-            } else {
-                const text = await res.text();
-                let data: any = {};
-                try { data = JSON.parse(text); } catch (e) { }
-                Alert.alert("Error", data?.message || "Failed to delete todo");
-            }
+            await apiService.deleteTodo(id);
+            // Remove from ui immediately or fetch again
+            fetchTodos(1);
         } catch (error: any) {
+            const data = error.response?.data;
             console.log("DELETE ERROR:", error?.message || error);
-            Alert.alert("Error", "Network error");
+            Alert.alert("Error", data?.message || "Failed to delete todo");
         }
     };
 
