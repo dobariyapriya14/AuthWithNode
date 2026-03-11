@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, Platform, View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { Button, Text, TextInput } from 'react-native-paper';
 import { createMMKV } from 'react-native-mmkv';
 import { API_URL, endPoints } from '../constants/apiCilents';
@@ -14,7 +14,13 @@ const LoginScreen = ({ navigation }: any) => {
     const [name, setName] = React.useState('');
     const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
-    const [showPassword, setShowPassword] = React.useState(false);
+
+    React.useEffect(() => {
+        fetch("http://10.0.2.2:3000/hello")
+            .then(res => res.json())
+            .then(data => console.log("API DATA:", data))
+            .catch(err => console.log("API ERROR:", err));
+    }, []);
 
     const handleLogin = async () => {
         try {
@@ -41,7 +47,7 @@ const LoginScreen = ({ navigation }: any) => {
                 // Try logging the accessToken if it's nested somewhere else, e.g. data.data.accessToken
                 if (data?.data?.accessToken) {
                     storage.set("accessToken", data.data.accessToken);
-                    navigation.navigate('ToDoList');
+                    navigation.navigate('');
                 } else {
                     Alert.alert("Login Error", "accessToken was not received from server");
                 }
@@ -82,13 +88,6 @@ const LoginScreen = ({ navigation }: any) => {
             Alert.alert("Error", "Network error");
         }
     };
-
-    React.useEffect(() => {
-        fetch("http://10.0.2.2:3000/hello")
-            .then(res => res.json())
-            .then(data => console.log("API DATA:", data))
-            .catch(err => console.log("API ERROR:", err));
-    }, []);
 
     const handleSendOtp = async () => {
         try {
@@ -178,7 +177,6 @@ const LoginScreen = ({ navigation }: any) => {
                     value={password}
                     onChangeText={setPassword}
                     mode="outlined"
-                    secureTextEntry={!showPassword}
                     style={{ marginBottom: 24 }}
                 />
             )}

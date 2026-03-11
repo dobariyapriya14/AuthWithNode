@@ -15,7 +15,9 @@ import LoginScreen from './src/screens/LoginScreen';
 import ToDoList from './src/screens/ToDoList';
 import { PaperProvider } from 'react-native-paper';
 import { createMMKV } from 'react-native-mmkv';
-
+import messaging from '@react-native-firebase/messaging';
+import notifee, { AndroidImportance } from '@notifee/react-native';
+import { useEffect } from 'react';
 const storage = createMMKV();
 
 const Stack = createNativeStackNavigator();
@@ -23,6 +25,49 @@ const Stack = createNativeStackNavigator();
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
   const hasToken = storage.getString("accessToken");
+
+  const requestPermission = async () => {
+    const authStatus = await messaging().requestPermission();
+    await notifee.requestPermission();
+    console.log("Permission status:", authStatus);
+  };
+
+  const getToken = async () => {
+    const token = await messaging().getToken();
+    console.log("FCM TOKEN:", token);
+  };
+
+  useEffect(() => {
+    requestPermission();
+    getToken();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = messaging().onMessage(async remoteMessage => {
+      console.log("Notification received:", remoteMessage);
+
+      const channelId = await notifee.createChannel({
+        id: 'default',
+        name: 'Default Channel',
+        importance: AndroidImportance.HIGH,
+      });
+
+      await notifee.displayNotification({
+        title: remoteMessage.notification?.title || (remoteMessage.data?.title as string) || 'New Notification',
+        body: remoteMessage.notification?.body || (remoteMessage.data?.body as string) || 'You have a new message',
+        android: {
+          channelId,
+          smallIcon: 'ic_launcher',
+          pressAction: {
+            id: 'default',
+          },
+        },
+      });
+    });
+
+    return unsubscribe;
+
+  }, []);
 
   return (
     <SafeAreaProvider>

@@ -37,7 +37,7 @@ const ToDoList = ({ navigation }: any) => {
         fetchTodos(1);
     }, []);
 
-    const logout = async () => {
+    const handleLogout = async () => {
         try {
             const token = storage.getString("accessToken");
             if (token) {
@@ -86,7 +86,6 @@ const ToDoList = ({ navigation }: any) => {
             }
 
             if (res.ok) {
-                console.log("fetchTodos parsed data:", data);
 
                 let todosArray = [];
                 if (Array.isArray(data)) {
@@ -267,7 +266,6 @@ const ToDoList = ({ navigation }: any) => {
             console.log('dataa', data)
         } catch (error: any) {
             console.log("SAVE ERROR:", error?.message || error);
-            Alert.alert("Error", "Network error");
         }
     };
 
@@ -439,7 +437,7 @@ const ToDoList = ({ navigation }: any) => {
                 icon={({ size, color }) => <Text style={{ fontSize: 20, color }}>🚪</Text>}
                 label="Logout"
                 style={styles.fab}
-                onPress={logout}
+                onPress={handleLogout}
             />
         </View>
     );
