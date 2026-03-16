@@ -38,7 +38,7 @@ const ToDoList = ({ navigation }: any) => {
     const fetchPaymentSheetParams = async () => {
         try {
             const response = await apiService.createPaymentIntent({ amount: 10 });
-            console.log('res', response)
+            console.log('res=====>', response)
             return response.data.clientSecret;
         } catch (error) {
             console.error("Payment Intent Error:", error);
