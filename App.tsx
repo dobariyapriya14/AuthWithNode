@@ -70,25 +70,27 @@ function App() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <PaperProvider>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-        <NavigationContainer>
-          <Stack.Navigator initialRouteName={hasToken ? "ToDoList" : "LoginScreen"}>
-            <Stack.Screen
-              name="LoginScreen"
-              component={LoginScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="ToDoList"
-              component={ToDoList}
-              options={{ title: 'My Tasks', headerShown: false }}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </PaperProvider>
-    </SafeAreaProvider>
+    <StripeProvider publishableKey="pk_test_51TBYJ9QNh8SDUnEiEtP4jvCHB9sQisRomDLDl0SkepHgjqA5ezJV9mVtkgbbjZqtbWE3ztGEONF0A1sZXIJukAx100FjKK3STp">
+      <SafeAreaProvider>
+        <PaperProvider>
+          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+          <NavigationContainer>
+            <Stack.Navigator initialRouteName={hasToken ? "ToDoList" : "LoginScreen"}>
+              <Stack.Screen
+                name="LoginScreen"
+                component={LoginScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="ToDoList"
+                component={ToDoList}
+                options={{ title: 'My Tasks', headerShown: false }}
+              />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </PaperProvider>
+      </SafeAreaProvider>
+    </StripeProvider>
   );
 }
 

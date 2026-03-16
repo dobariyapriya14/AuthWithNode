@@ -4,7 +4,7 @@ import { Text, TextInput, Button, Card, ActivityIndicator, FAB, Portal, Modal } 
 import { createMMKV } from 'react-native-mmkv';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import DocumentPicker from 'react-native-document-picker';
-import { apiService } from '../services/apiService';
+import apiService from '../services/apiService';
 
 const storage = createMMKV();
 interface Todo {
@@ -32,6 +32,51 @@ const ToDoList = ({ navigation }: any) => {
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [newMode, setNewMode] = useState<boolean>(true);
+
+    const { initPaymentSheet, presentPaymentSheet } = useStripe();
+
+    const fetchPaymentSheetParams = async () => {
+        try {
+            const response = await apiService.createPaymentIntent({ amount: 10 });
+            console.log('res', response)
+            return response.data.clientSecret;
+        } catch (error) {
+            console.error("Payment Intent Error:", error);
+            throw error;
+        }
+    };
+
+    const initializePaymentSheet = async () => {
+        try {
+            setLoading(true);
+            const clientSecret = await fetchPaymentSheetParams();
+
+            const { error } = await initPaymentSheet({
+                paymentIntentClientSecret: clientSecret,
+                merchantDisplayName: "My App"
+            });
+
+            if (!error) {
+                await openPaymentSheet();
+            } else {
+                Alert.alert("Error", error.message);
+            }
+        } catch (error: any) {
+            Alert.alert("Error", "Failed to initialize payment");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const openPaymentSheet = async () => {
+        const { error } = await presentPaymentSheet();
+
+        if (error) {
+            Alert.alert(`Payment failed: ${error.message}`);
+        } else {
+            Alert.alert("Payment successful");
+        }
+    };
 
     useEffect(() => {
         fetchTodos(1);
@@ -354,16 +399,23 @@ const ToDoList = ({ navigation }: any) => {
                                     style={{ marginTop: 10, borderBottomLeftRadius: 10, borderBottomRightRadius: 10 }}
                                 />
                             )}
-                            {!!item.pdf && (
-                                <Card.Actions>
+                            <Card.Actions>
+                                {!!item.pdf && (
                                     <Button
                                         icon={({ size, color }) => <Text style={{ fontSize: 20, color }}>📄</Text>}
                                         onPress={() => Linking.openURL(Platform.OS === 'android' ? item.pdf!.replace('localhost', '10.0.2.2') : item.pdf!)}
                                     >
                                         View PDF
                                     </Button>
-                                </Card.Actions>
-                            )}
+                                )}
+                                <Button
+                                    mode="contained-tonal"
+                                    onPress={initializePaymentSheet}
+                                    style={{ marginLeft: 8 }}
+                                >
+                                    Buy Now
+                                </Button>
+                            </Card.Actions>
                         </Card>
                     )}
                 />
