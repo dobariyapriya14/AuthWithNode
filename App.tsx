@@ -6,6 +6,7 @@
  */
 
 import { StatusBar, StyleSheet, useColorScheme } from 'react-native';
+import './src/i18n';
 import {
   SafeAreaProvider,
 } from 'react-native-safe-area-context';

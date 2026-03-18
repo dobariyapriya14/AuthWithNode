@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, FlatList, Platform, StyleSheet, Alert, TouchableOpacity, Linking, Switch } from 'react-native';
-import { Text, TextInput, Button, Card, ActivityIndicator, FAB, Portal, Modal } from 'react-native-paper';
+import { Text, TextInput, Button, Card, ActivityIndicator, FAB, Portal, Modal, Menu, Divider } from 'react-native-paper';
 import { createMMKV } from 'react-native-mmkv';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import DocumentPicker from 'react-native-document-picker';
 import apiService from '../services/apiService';
+import offlineService from '../services/offlineService';
+import NetInfo from '@react-native-community/netinfo';
+import { useTranslation } from 'react-i18next';
+import { changeLanguage } from '../i18n';
 
 const storage = createMMKV();
 interface Todo {
@@ -32,13 +36,15 @@ const ToDoList = ({ navigation }: any) => {
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [newMode, setNewMode] = useState<boolean>(true);
+    const [isOffline, setIsOffline] = useState(false);
+    const [isMenuVisible, setIsMenuVisible] = useState(false);
+    const { t, i18n } = useTranslation();
 
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
     const fetchPaymentSheetParams = async () => {
         try {
             const response = await apiService.createPaymentIntent({ amount: 10 });
-            console.log('res=====>', response)
             return response.data.clientSecret;
         } catch (error) {
             console.error("Payment Intent Error:", error);
@@ -79,7 +85,27 @@ const ToDoList = ({ navigation }: any) => {
     };
 
     useEffect(() => {
+        // Initial fetch from cache for faster startup
+        const cachedTodos = offlineService.getTodosCache();
+        if (cachedTodos.length > 0) {
+            setTodos(cachedTodos);
+        }
+
+        // Network status listener
+        const unsubscribe = NetInfo.addEventListener(state => {
+            const wasOffline = isOffline;
+            const nowOffline = !state.isConnected;
+            setIsOffline(nowOffline);
+
+            if (wasOffline && !nowOffline) {
+                // Back online! Sync pending changes
+                offlineService.syncPendingMutations().then(() => fetchTodos(1));
+            }
+        });
+
         fetchTodos(1);
+
+        return () => unsubscribe();
     }, []);
 
     const handleLogout = async () => {
@@ -102,8 +128,19 @@ const ToDoList = ({ navigation }: any) => {
         } else {
             setLoadingMore(true);
         }
+
         try {
-            // Adding cache buster timestamp to prevent aggressive caching on Android
+            const state = await NetInfo.fetch();
+            if (!state.isConnected) {
+                // Offline mode: Use cache
+                if (pageNumber === 1) {
+                    const cachedTodos = offlineService.getTodosCache();
+                    setTodos(cachedTodos);
+                    setHasMore(false);
+                }
+                return;
+            }
+
             const res = await apiService.getTodos(pageNumber);
             const data = res.data;
 
@@ -116,22 +153,20 @@ const ToDoList = ({ navigation }: any) => {
                 todosArray = data.data;
             }
 
-            console.log("Setting todos state to:", todosArray);
             if (pageNumber === 1) {
                 setTodos(todosArray);
+                offlineService.setTodosCache(todosArray); // Update cache
             } else {
                 setTodos(prev => [...prev, ...todosArray]);
             }
             setPage(pageNumber);
-
-            // If the array is empty, we reached the end
-            if (todosArray.length === 0) {
-                setHasMore(false);
-            } else {
-                if (pageNumber === 1) setHasMore(true);
-            }
+            if (todosArray.length === 0) setHasMore(false);
         } catch (error: any) {
             console.log("API ERROR:", error?.response?.data || error.message);
+            // On error, try to fallback to cache if page 1
+            if (pageNumber === 1) {
+                setTodos(offlineService.getTodosCache());
+            }
         } finally {
             setLoading(false);
             setLoadingMore(false);
@@ -224,74 +259,148 @@ const ToDoList = ({ navigation }: any) => {
             Alert.alert("Validation", "Title is required");
             return;
         }
+
+        // Optimistic UI update
+        const id = editingTodoId || "temp_" + Date.now();
+        const optimisticTodo: Todo = {
+            _id: id,
+            title: newTitle,
+            description: newDescription,
+            mode: newMode,
+            completed: false,
+            image: typeof newImage === 'string' ? newImage : newImage?.uri,
+            pdf: typeof newPdf === 'string' ? newPdf : newPdf?.uri,
+        };
+
+        if (editingTodoId) {
+            setTodos(prev => prev.map(t => (t._id === editingTodoId || t.id === editingTodoId) ? optimisticTodo : t));
+        } else {
+            setTodos(prev => [optimisticTodo, ...prev]);
+        }
+        hideModal();
+
         try {
+            const state = await NetInfo.fetch();
+            if (!state.isConnected) {
+                // Queue mutation for later
+                offlineService.addMutationToQueue({
+                    type: editingTodoId ? 'UPDATE' : 'ADD',
+                    data: { title: newTitle, description: newDescription, mode: newMode }, // Simple data for now
+                    targetId: editingTodoId || undefined
+                });
+                return;
+            }
+
             const formData = new FormData();
             formData.append("title", newTitle);
             formData.append("mode", String(newMode));
-            if (newDescription) {
-                formData.append("description", newDescription);
-            }
+            if (newDescription) formData.append("description", newDescription);
+
             if (newImage && newImage.uri) {
                 formData.append("image", {
                     uri: newImage.uri,
                     type: newImage.type || "image/jpeg",
                     name: newImage.fileName || "upload.jpg"
                 } as any);
-            } else if (typeof newImage === 'string') {
-                formData.append("image", newImage);
             }
-
             if (newPdf && newPdf.uri) {
                 formData.append("pdf", {
                     uri: newPdf.uri,
                     type: newPdf.type || "application/pdf",
                     name: newPdf.name || "upload.pdf"
                 } as any);
-            } else if (typeof newPdf === 'string') {
-                formData.append("pdf", newPdf);
             }
 
-            const res = await apiService.saveTodo(formData, editingTodoId);
-            const data = res.data;
-            hideModal();
-            fetchTodos(1);
-            console.log('dataa', data);
+            await apiService.saveTodo(formData, editingTodoId);
+            fetchTodos(1); // Refresh to get real IDs and data
         } catch (error: any) {
-            const data = error.response?.data;
-            Alert.alert("Error", data?.message || "Failed to save todo");
             console.log("SAVE ERROR:", error?.message || error);
+            // On failure, if we're not actually offline, we should probably rollback or notify
+            Alert.alert("Notice", "Task saved locally. It will sync when connection is stable.");
+            offlineService.addMutationToQueue({
+                type: editingTodoId ? 'UPDATE' : 'ADD',
+                data: { title: newTitle, description: newDescription, mode: newMode },
+                targetId: editingTodoId || undefined
+            });
         }
     };
 
     const deleteTodo = async (id: string | undefined) => {
         if (!id) return;
+
+        // Optimistic UI update
+        setTodos(prev => prev.filter(t => t._id !== id && t.id !== id));
+
         try {
+            const state = await NetInfo.fetch();
+            if (!state.isConnected) {
+                offlineService.addMutationToQueue({
+                    type: 'DELETE',
+                    targetId: id
+                });
+                return;
+            }
             await apiService.deleteTodo(id);
-            // Remove from ui immediately or fetch again
-            fetchTodos(1);
         } catch (error: any) {
-            const data = error.response?.data;
             console.log("DELETE ERROR:", error?.message || error);
-            Alert.alert("Error", data?.message || "Failed to delete todo");
+            // Fallback to queue if it failed due to connectivity
+            offlineService.addMutationToQueue({
+                type: 'DELETE',
+                targetId: id
+            });
         }
     };
 
     return (
         <View style={styles.container}>
-            <Text variant="headlineMedium" style={styles.header}>To Do List</Text>
+            {isOffline && (
+                <View style={styles.offlineBanner}>
+                    <Text style={styles.offlineText}>You are currently offline. Changes will sync later.</Text>
+                </View>
+            )}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <Text variant="headlineMedium" style={[styles.header, { marginBottom: 0 }]}>{t('todo_list')}</Text>
+
+                <Menu
+                    visible={isMenuVisible}
+                    onDismiss={() => setIsMenuVisible(false)}
+                    anchor={
+                        <Button
+                            mode="outlined"
+                            onPress={() => setIsMenuVisible(true)}
+                            icon={({ size, color }) => <Text style={{ fontSize: 16 }}>🌐</Text>}
+                        >
+                            {i18n.language.toUpperCase()}
+                        </Button>
+                    }
+                >
+                    <Menu.Item
+                        onPress={() => { changeLanguage('en'); setIsMenuVisible(false); }}
+                        title={t('English')}
+                        leadingIcon={i18n.language === 'en' ? 'check' : undefined}
+                    />
+                    <Divider />
+                    <Menu.Item
+                        onPress={() => { changeLanguage('fr'); setIsMenuVisible(false); }}
+                        title={t('French')}
+                        leadingIcon={i18n.language === 'fr' ? 'check' : undefined}
+                    />
+                    <Divider />
+                </Menu>
+            </View>
 
             <Button mode="contained" onPress={showModal} style={{ marginBottom: 20 }}>
-                + Add Todo
+                {t('add_todo')}
             </Button>
 
             <Portal>
                 <Modal visible={isAddModalVisible} onDismiss={hideModal} contentContainerStyle={styles.modalContent}>
                     <Text variant="titleLarge" style={{ marginBottom: 16 }}>
-                        {editingTodoId ? "Edit Task" : "Add New Task"}
+                        {editingTodoId ? t('edit_task', 'Edit Task') : t('add_new_task', 'Add New Task')}
                     </Text>
 
                     <TextInput
-                        label="Title"
+                        label={t('title', 'Title')}
                         value={newTitle}
                         onChangeText={setNewTitle}
                         mode="outlined"
@@ -299,7 +408,7 @@ const ToDoList = ({ navigation }: any) => {
                     />
 
                     <TextInput
-                        label="Description"
+                        label={t('description', 'Description')}
                         value={newDescription}
                         onChangeText={setNewDescription}
                         mode="outlined"
@@ -422,7 +531,7 @@ const ToDoList = ({ navigation }: any) => {
             )}
             <FAB
                 icon={({ size, color }) => <Text style={{ fontSize: 20, color }}>🚪</Text>}
-                label="Logout"
+                label={t('Logout')}
                 style={styles.fab}
                 onPress={handleLogout}
             />
@@ -439,6 +548,18 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 20,
         fontWeight: 'bold',
+    },
+    offlineBanner: {
+        backgroundColor: '#ff9800',
+        padding: 8,
+        borderRadius: 4,
+        marginBottom: 10,
+        alignItems: 'center',
+    },
+    offlineText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 12,
     },
     modalContent: {
         backgroundColor: 'white',

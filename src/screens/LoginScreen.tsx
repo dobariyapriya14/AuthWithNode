@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { Alert, View } from 'react-native';
-import { Button, Text, TextInput } from 'react-native-paper';
+import { Button, Text, TextInput, Menu, Divider } from 'react-native-paper';
+import { useTranslation } from 'react-i18next';
+import { changeLanguage } from '../i18n';
 import { createMMKV } from 'react-native-mmkv';
 import { apiService } from '../services/apiService';
 
@@ -9,6 +11,8 @@ const storage = createMMKV();
 const LoginScreen = ({ navigation }: any) => {
     const [isLogin, setIsLogin] = React.useState(true);
     const [isOtpMode, setIsOtpMode] = React.useState(false);
+    const [isMenuVisible, setIsMenuVisible] = React.useState(false);
+    const { t, i18n } = useTranslation();
     const [otpSent, setOtpSent] = React.useState(false);
     const [otp, setOtp] = React.useState('');
     const [name, setName] = React.useState('');
@@ -87,84 +91,116 @@ const LoginScreen = ({ navigation }: any) => {
     };
 
     return (
-        <View style={{ flex: 1, justifyContent: 'center', padding: 20 }}>
-            <Text variant="headlineMedium" style={{ textAlign: 'center', marginBottom: 24, fontWeight: 'bold' }}>
-                {isOtpMode ? "OTP Login" : (isLogin ? "Welcome Back" : "Create Account")}
-            </Text>
+        <View style={{ flex: 1, padding: 20 }}>
+            <View style={{ alignSelf: 'flex-end', marginTop: 10 }}>
+                <Menu
+                    visible={isMenuVisible}
+                    onDismiss={() => setIsMenuVisible(false)}
+                    anchor={
+                        <Button 
+                            mode="outlined" 
+                            onPress={() => setIsMenuVisible(true)}
+                            icon={({ size, color }) => <Text style={{ fontSize: 16 }}>🌐</Text>}
+                            style={{ borderRadius: 8 }}
+                        >
+                            {i18n.language.toUpperCase()}
+                        </Button>
+                    }
+                >
+                    <Menu.Item 
+                        onPress={() => { changeLanguage('en'); setIsMenuVisible(false); }} 
+                        title={t('English')} 
+                        leadingIcon={i18n.language === 'en' ? 'check' : undefined}
+                    />
+                    <Divider />
+                    <Menu.Item 
+                        onPress={() => { changeLanguage('fr'); setIsMenuVisible(false); }} 
+                        title={t('French')} 
+                        leadingIcon={i18n.language === 'fr' ? 'check' : undefined}
+                    />
+                </Menu>
+            </View>
 
-            {!isLogin && !isOtpMode && (
+            <View style={{ flex: 1, justifyContent: 'center' }}>
+                <Text variant="headlineMedium" style={{ textAlign: 'center', marginBottom: 24, fontWeight: 'bold' }}>
+                    {isOtpMode ? t('otp_login') : (isLogin ? t('welcome_back') : t('create_account'))}
+                </Text>
+
+                {!isLogin && !isOtpMode && (
+                    <TextInput
+                        label={t('name')}
+                        value={name}
+                        onChangeText={setName}
+                        mode="outlined"
+                        style={{ marginBottom: 16 }}
+                    />
+                )}
+
                 <TextInput
-                    label="Name"
-                    value={name}
-                    onChangeText={setName}
+                    label={t('email')}
+                    value={email}
+                    onChangeText={setEmail}
                     mode="outlined"
                     style={{ marginBottom: 16 }}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    disabled={isOtpMode && otpSent}
                 />
-            )}
 
-            <TextInput
-                label="Email"
-                value={email}
-                onChangeText={setEmail}
-                mode="outlined"
-                style={{ marginBottom: 16 }}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                disabled={isOtpMode && otpSent}
-            />
+                {!isOtpMode && (
+                    <TextInput
+                        label={t('password')}
+                        value={password}
+                        onChangeText={setPassword}
+                        mode="outlined"
+                        style={{ marginBottom: 24 }}
+                        secureTextEntry
+                    />
+                )}
 
-            {!isOtpMode && (
-                <TextInput
-                    label="Password"
-                    value={password}
-                    onChangeText={setPassword}
-                    mode="outlined"
-                    style={{ marginBottom: 24 }}
-                />
-            )}
+                {isOtpMode && otpSent && (
+                    <TextInput
+                        label={t('enter_otp')}
+                        value={otp}
+                        onChangeText={setOtp}
+                        mode="outlined"
+                        style={{ marginBottom: 24 }}
+                        keyboardType="numeric"
+                    />
+                )}
 
-            {isOtpMode && otpSent && (
-                <TextInput
-                    label="Enter OTP"
-                    value={otp}
-                    onChangeText={setOtp}
-                    mode="outlined"
-                    style={{ marginBottom: 24 }}
-                    keyboardType="numeric"
-                />
-            )}
-
-            <Button
-                mode="contained"
-                onPress={() => isOtpMode ? (otpSent ? handleVerifyOtp() : handleSendOtp()) : (isLogin ? handleLogin() : handleSignup())}
-                contentStyle={{ height: 48 }}
-                style={{ borderRadius: 8 }}
-            >
-                {isOtpMode ? (otpSent ? "Verify OTP" : "Send OTP") : (isLogin ? "Login" : "Sign Up")}
-            </Button>
-
-            {!isOtpMode && (
                 <Button
-                    mode="text"
-                    onPress={() => setIsLogin(!isLogin)}
-                    style={{ marginTop: 16 }}
+                    mode="contained"
+                    onPress={() => isOtpMode ? (otpSent ? handleVerifyOtp() : handleSendOtp()) : (isLogin ? handleLogin() : handleSignup())}
+                    contentStyle={{ height: 48 }}
+                    style={{ borderRadius: 8 }}
                 >
-                    {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login"}
+                    {isOtpMode ? (otpSent ? t('otp_verify') : t('otp_send')) : (isLogin ? t('login') : t('signup'))}
                 </Button>
-            )}
 
-            {isLogin && (
-                <Button
-                    mode="text"
-                    onPress={() => {
-                        setIsOtpMode(!isOtpMode);
-                        setOtpSent(false);
-                    }}
-                    style={{ marginTop: isOtpMode ? 16 : 8 }}
-                >
-                    {isOtpMode ? "Login with Password instead" : "Login with OTP"}
-                </Button>
-            )}
+                {!isOtpMode && (
+                    <Button
+                        mode="text"
+                        onPress={() => setIsLogin(!isLogin)}
+                        style={{ marginTop: 16 }}
+                    >
+                        {isLogin ? t('no_account') : t('already_account')}
+                    </Button>
+                )}
+
+                {isLogin && (
+                    <Button
+                        mode="text"
+                        onPress={() => {
+                            setIsOtpMode(!isOtpMode);
+                            setOtpSent(false);
+                        }}
+                        style={{ marginTop: isOtpMode ? 16 : 8 }}
+                    >
+                        {isOtpMode ? t('login_password') : t('login_otp')}
+                    </Button>
+                )}
+            </View>
         </View>
     );
 };
