@@ -9,6 +9,7 @@ import offlineService from '../services/offlineService';
 import NetInfo from '@react-native-community/netinfo';
 import { useTranslation } from 'react-i18next';
 import { changeLanguage } from '../i18n';
+import { useStripe } from '@stripe/stripe-react-native';
 
 const storage = createMMKV();
 interface Todo {
@@ -396,11 +397,11 @@ const ToDoList = ({ navigation }: any) => {
             <Portal>
                 <Modal visible={isAddModalVisible} onDismiss={hideModal} contentContainerStyle={styles.modalContent}>
                     <Text variant="titleLarge" style={{ marginBottom: 16 }}>
-                        {editingTodoId ? t('edit_task', 'Edit Task') : t('add_new_task', 'Add New Task')}
+                        {editingTodoId ? t('edit_task') : t('add_new_task')}
                     </Text>
 
                     <TextInput
-                        label={t('title', 'Title')}
+                        label={t('title')}
                         value={newTitle}
                         onChangeText={setNewTitle}
                         mode="outlined"
@@ -408,7 +409,7 @@ const ToDoList = ({ navigation }: any) => {
                     />
 
                     <TextInput
-                        label={t('description', 'Description')}
+                        label={t('description')}
                         value={newDescription}
                         onChangeText={setNewDescription}
                         mode="outlined"

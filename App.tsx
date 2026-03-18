@@ -19,6 +19,8 @@ import { createMMKV } from 'react-native-mmkv';
 import messaging from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { useEffect } from 'react';
+import { StripeProvider } from '@stripe/stripe-react-native';
+
 const storage = createMMKV();
 
 const Stack = createNativeStackNavigator();
