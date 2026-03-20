@@ -30,6 +30,7 @@
     "react-native-mmkv": "^4.2.0",
     "react-native-nitro-modules": "^0.35.0",
     "react-native-paper": "^5.15.0",
+    "react-native-purchases": "^9.14.0",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.24.0"
   },

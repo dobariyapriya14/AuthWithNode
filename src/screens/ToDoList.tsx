@@ -10,6 +10,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { useTranslation } from 'react-i18next';
 import { changeLanguage } from '../i18n';
 import { useStripe } from '@stripe/stripe-react-native';
+import Purchases from 'react-native-purchases';
 
 const storage = createMMKV();
 interface Todo {
@@ -39,7 +40,15 @@ const ToDoList = ({ navigation }: any) => {
     const [newMode, setNewMode] = useState<boolean>(true);
     const [isOffline, setIsOffline] = useState(false);
     const [isMenuVisible, setIsMenuVisible] = useState(false);
+    const [offerings, setOfferings] = useState<any>(null);
+    const [isPaywallVisible, setIsPaywallVisible] = useState(false);
     const { t, i18n } = useTranslation();
+
+    useEffect(() => {
+        Purchases.configure({
+            apiKey: "test_tbPImWadehhRVGNhtYSlZiQxztj",
+        });
+    }, []);
 
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
@@ -82,6 +91,40 @@ const ToDoList = ({ navigation }: any) => {
             Alert.alert(`Payment failed: ${error.message}`);
         } else {
             Alert.alert("Payment successful");
+        }
+    };
+
+    const handleRevenueClick = async () => {
+        try {
+            setLoading(true);
+            const offeringsData = await Purchases.getOfferings();
+            if (offeringsData.current !== null && offeringsData.current.availablePackages.length !== 0) {
+                setOfferings(offeringsData.current);
+                setIsPaywallVisible(true);
+            } else {
+                Alert.alert("Offerings", "No offerings available at the moment.");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "Failed to fetch offerings");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePurchase = async (pkg: any) => {
+        try {
+            setLoading(true);
+            const { customerInfo } = await Purchases.purchasePackage(pkg);
+            if (typeof customerInfo.entitlements.active['pro'] !== "undefined") {
+                Alert.alert("Success", "You are now a PRO user!");
+                setIsPaywallVisible(false);
+            }
+        } catch (e: any) {
+            if (!e.userCancelled) {
+                Alert.alert("Error", e.message);
+            }
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -390,9 +433,14 @@ const ToDoList = ({ navigation }: any) => {
                 </Menu>
             </View>
 
-            <Button mode="contained" onPress={showModal} style={{ marginBottom: 20 }}>
-                {t('add_todo')}
-            </Button>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+                <Button mode="contained" onPress={showModal} style={{ flex: 1, marginRight: 8 }}>
+                    {t('add_todo')}
+                </Button>
+                <Button mode="contained" onPress={handleRevenueClick} style={{ flex: 1, marginLeft: 8 }} icon="currency-usd">
+                    Revenue
+                </Button>
+            </View>
 
             <Portal>
                 <Modal visible={isAddModalVisible} onDismiss={hideModal} contentContainerStyle={styles.modalContent}>
@@ -453,6 +501,34 @@ const ToDoList = ({ navigation }: any) => {
                             <Button mode="contained" onPress={saveTodo}>{editingTodoId ? "Save" : "Add"}</Button>
                         </View>
                     </View>
+                </Modal>
+
+                <Modal visible={isPaywallVisible} onDismiss={() => setIsPaywallVisible(false)} contentContainerStyle={styles.modalContent}>
+                    <Text variant="headlineSmall" style={{ textAlign: 'center', marginBottom: 20, fontWeight: 'bold' }}>
+                        💎 Upgrade to Pro
+                    </Text>
+                    <Text style={{ textAlign: 'center', marginBottom: 20, color: 'gray' }}>
+                        Get access to all premium features and remove ads.
+                    </Text>
+
+                    {offerings?.availablePackages.map((pkg: any) => (
+                        <Card key={pkg.identifier} style={{ marginBottom: 16, backgroundColor: '#f0f0f0' }}>
+                            <Card.Content style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>{pkg.product.title.split(' (')[0]}</Text>
+                                    <Text variant="bodySmall">{pkg.product.description}</Text>
+                                    <Text variant="titleLarge" style={{ marginTop: 8, color: '#6200ee' }}>{pkg.product.priceString}</Text>
+                                </View>
+                                <Button mode="contained" onPress={() => handlePurchase(pkg)}>
+                                    Buy
+                                </Button>
+                            </Card.Content>
+                        </Card>
+                    ))}
+
+                    <Button onPress={() => setIsPaywallVisible(false)} style={{ marginTop: 10 }}>
+                        Maybe Later
+                    </Button>
                 </Modal>
             </Portal>
 
