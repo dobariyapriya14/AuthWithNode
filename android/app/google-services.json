@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "723224998541",
+    "project_id": "node-notification-d37de",
+    "storage_bucket": "node-notification-d37de.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:723224998541:android:1fff84804f107056a728c4",
+        "android_client_info": {
+          "package_name": "com.authwithnode"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBGtHB8ISInRn0mz1sGe3FI1DkZTqbnAmw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
