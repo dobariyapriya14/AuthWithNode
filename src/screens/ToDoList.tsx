@@ -3,7 +3,6 @@ import { View, FlatList, Platform, StyleSheet, Alert, TouchableOpacity, Linking,
 import { Text, TextInput, Button, Card, ActivityIndicator, FAB, Portal, Modal, Menu, Divider } from 'react-native-paper';
 import { createMMKV } from 'react-native-mmkv';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
-import DocumentPicker from 'react-native-document-picker';
 import apiService from '../services/apiService';
 import offlineService from '../services/offlineService';
 import NetInfo from '@react-native-community/netinfo';
@@ -32,7 +31,6 @@ const ToDoList = ({ navigation }: any) => {
     const [newTitle, setNewTitle] = useState('');
     const [newDescription, setNewDescription] = useState('');
     const [newImage, setNewImage] = useState<any>(null);
-    const [newPdf, setNewPdf] = useState<any>(null);
     const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -43,14 +41,13 @@ const ToDoList = ({ navigation }: any) => {
     const [offerings, setOfferings] = useState<any>(null);
     const [isPaywallVisible, setIsPaywallVisible] = useState(false);
     const { t, i18n } = useTranslation();
+    const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
     useEffect(() => {
         Purchases.configure({
-            apiKey: "test_tbPImWadehhRVGNhtYSlZiQxztj",
+            apiKey: "test_EuPBCcDfGZCmdkUWONqLbrxFwOx",
         });
     }, []);
-
-    const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
     const fetchPaymentSheetParams = async () => {
         try {
@@ -228,7 +225,6 @@ const ToDoList = ({ navigation }: any) => {
         setNewTitle('');
         setNewDescription('');
         setNewImage(null);
-        setNewPdf(null);
         setNewMode(true);
         setIsAddModalVisible(true);
     };
@@ -239,7 +235,6 @@ const ToDoList = ({ navigation }: any) => {
         setNewTitle('');
         setNewDescription('');
         setNewImage(null);
-        setNewPdf(null);
         setNewMode(true);
     };
 
@@ -282,22 +277,6 @@ const ToDoList = ({ navigation }: any) => {
         );
     };
 
-    const handlePdfUpload = async () => {
-        try {
-            const res = await DocumentPicker.pickSingle({
-                type: [DocumentPicker.types.pdf],
-            });
-            setNewPdf(res);
-        } catch (err) {
-            if (DocumentPicker.isCancel(err)) {
-                console.log('User cancelled document picker');
-            } else {
-                console.log('DocumentPicker Error: ', err);
-                Alert.alert('Error', 'Failed to pick PDF');
-            }
-        }
-    };
-
     const saveTodo = async () => {
         if (!newTitle.trim()) {
             Alert.alert("Validation", "Title is required");
@@ -313,7 +292,6 @@ const ToDoList = ({ navigation }: any) => {
             mode: newMode,
             completed: false,
             image: typeof newImage === 'string' ? newImage : newImage?.uri,
-            pdf: typeof newPdf === 'string' ? newPdf : newPdf?.uri,
         };
 
         if (editingTodoId) {
@@ -345,13 +323,6 @@ const ToDoList = ({ navigation }: any) => {
                     uri: newImage.uri,
                     type: newImage.type || "image/jpeg",
                     name: newImage.fileName || "upload.jpg"
-                } as any);
-            }
-            if (newPdf && newPdf.uri) {
-                formData.append("pdf", {
-                    uri: newPdf.uri,
-                    type: newPdf.type || "application/pdf",
-                    name: newPdf.name || "upload.pdf"
                 } as any);
             }
 
@@ -475,15 +446,6 @@ const ToDoList = ({ navigation }: any) => {
                         {newImage ? "Image Selected" : "Upload Image"}
                     </Button>
 
-                    <Button
-                        mode="outlined"
-                        onPress={handlePdfUpload}
-                        style={{ marginBottom: 16 }}
-                        icon={({ size, color }) => <Text style={{ fontSize: 20, color }}>📄</Text>}
-                    >
-                        {newPdf ? "PDF Selected" : "Upload PDF"}
-                    </Button>
-
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Switch
@@ -557,7 +519,6 @@ const ToDoList = ({ navigation }: any) => {
                                                 setNewTitle(item.title || item.name || "");
                                                 setNewDescription(item.description || "");
                                                 setNewImage(item.image || "");
-                                                setNewPdf(item.pdf || "");
                                                 setNewMode(item.mode !== undefined ? item.mode : true);
                                                 setIsAddModalVisible(true);
                                             }}
@@ -586,14 +547,6 @@ const ToDoList = ({ navigation }: any) => {
                                 />
                             )}
                             <Card.Actions>
-                                {!!item.pdf && (
-                                    <Button
-                                        icon={({ size, color }) => <Text style={{ fontSize: 20, color }}>📄</Text>}
-                                        onPress={() => Linking.openURL(Platform.OS === 'android' ? item.pdf!.replace('localhost', '10.0.2.2') : item.pdf!)}
-                                    >
-                                        View PDF
-                                    </Button>
-                                )}
                                 <Button
                                     mode="contained-tonal"
                                     onPress={initializePaymentSheet}

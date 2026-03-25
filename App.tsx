@@ -20,6 +20,7 @@ import messaging from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { useEffect } from 'react';
 import { StripeProvider } from '@stripe/stripe-react-native';
+import DigitalSignature from './src/screens/DigitalSignature';
 
 const storage = createMMKV();
 
@@ -73,27 +74,30 @@ function App() {
   }, []);
 
   return (
-    <StripeProvider publishableKey="pk_test_51TBYJ9QNh8SDUnEiEtP4jvCHB9sQisRomDLDl0SkepHgjqA5ezJV9mVtkgbbjZqtbWE3ztGEONF0A1sZXIJukAx100FjKK3STp">
-      <SafeAreaProvider>
-        <PaperProvider>
-          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-          <NavigationContainer>
-            <Stack.Navigator initialRouteName={hasToken ? "ToDoList" : "LoginScreen"}>
-              <Stack.Screen
-                name="LoginScreen"
-                component={LoginScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="ToDoList"
-                component={ToDoList}
-                options={{ title: 'My Tasks', headerShown: false }}
-              />
-            </Stack.Navigator>
-          </NavigationContainer>
-        </PaperProvider>
-      </SafeAreaProvider>
-    </StripeProvider>
+    // <StripeProvider publishableKey="pk_test_51TBYJ9QNh8SDUnEiEtP4jvCHB9sQisRomDLDl0SkepHgjqA5ezJV9mVtkgbbjZqtbWE3ztGEONF0A1sZXIJukAx100FjKK3STp">
+    //   <SafeAreaProvider>
+    //     <PaperProvider>
+    //       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+    //       <NavigationContainer>
+    //         <Stack.Navigator initialRouteName={hasToken ? "ToDoList" : "LoginScreen"}>
+    //           <Stack.Screen
+    //             name="LoginScreen"
+    //             component={LoginScreen}
+    //             options={{ headerShown: false }}
+    //           />
+    //           <Stack.Screen
+    //             name="ToDoList"
+    //             component={ToDoList}
+    //             options={{ title: 'My Tasks', headerShown: false }}
+    //           />
+    //         </Stack.Navigator>
+    //       </NavigationContainer>
+    //     </PaperProvider>
+    //   </SafeAreaProvider>
+    // </StripeProvider>
+    <>
+      <DigitalSignature />
+    </>
   );
 }
 
