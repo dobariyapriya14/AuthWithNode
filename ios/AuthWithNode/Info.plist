@@ -40,8 +40,10 @@
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
+	<key>NSFaceIDUsageDescription</key>
+	<string>We use Face ID / Touch ID to secure access to payment checkout, signed documents, and sensitive app features.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-<string>This app needs your location to mark attendance</string>
+	<string>This app needs your location to mark attendance</string>
 <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 <string>This app needs location even in background</string>
 <key>NSLocationAlwaysUsageDescription</key>

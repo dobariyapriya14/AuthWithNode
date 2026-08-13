@@ -1,8 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Button, Image, Text, ScrollView, Platform } from 'react-native';
+import { View, Button, Image, Text, ScrollView, Platform, Alert } from 'react-native';
 import SignatureScreen, { SignatureViewRef } from 'react-native-signature-canvas';
 import { createMMKV } from 'react-native-mmkv';
 import Geolocation from 'react-native-geolocation-service';
+import biometricService from '../services/biometricService';
 
 const DigitalSignature = () => {
     const ref = useRef<SignatureViewRef>(null);
@@ -88,8 +89,14 @@ const DigitalSignature = () => {
         ref.current?.clearSignature();
         setSignature(null); // Also clear the preview
     };
-    const handleConfirm = () => {
-        ref.current?.readSignature();
+
+    const handleConfirm = async () => {
+        const authenticated = await biometricService.authenticate("Authenticate with Face ID / Fingerprint to approve signature");
+        if (authenticated) {
+            ref.current?.readSignature();
+        } else {
+            Alert.alert("Authentication Failed", "Biometric authorization is required to save signed document.");
+        }
     };
 
 

@@ -4,6 +4,7 @@ import { Button, Text, TextInput, Menu, Divider } from 'react-native-paper';
 import { useTranslation } from 'react-i18next';
 import { changeLanguage } from '../i18n';
 import { createMMKV } from 'react-native-mmkv';
+import { storageService } from '../services/storageService';
 import { apiService } from '../services/apiService';
 
 const storage = createMMKV();
@@ -24,12 +25,11 @@ const LoginScreen = ({ navigation }: any) => {
             const res = await apiService.login({ email, password });
             const data = res.data;
 
-            // Save accessToken if it exists in the response
-            if (data && data.accessToken) {
-                storage.set("accessToken", data.accessToken);
-                navigation.navigate('ToDoList');
-            } else if (data?.data?.accessToken) {
-                storage.set("accessToken", data.data.accessToken);
+            const accessToken = data?.accessToken || data?.data?.accessToken;
+            const refreshToken = data?.refreshToken || data?.data?.refreshToken;
+
+            if (accessToken) {
+                storageService.setTokens(accessToken, refreshToken);
                 navigation.navigate('ToDoList');
             } else {
                 Alert.alert("Login Error", "accessToken was not received from server");
@@ -73,16 +73,15 @@ const LoginScreen = ({ navigation }: any) => {
             const res = await apiService.verifyOtp({ email, otp });
             const data = res.data;
 
-            // Same logic as login to set token and navigate
-            if (data && data.accessToken) {
-                storage.set("accessToken", data.accessToken);
-                navigation.navigate('ToDoList');
-            } else if (data?.data?.accessToken) {
-                storage.set("accessToken", data.data.accessToken);
+            const accessToken = data?.accessToken || data?.data?.accessToken;
+            const refreshToken = data?.refreshToken || data?.data?.refreshToken;
+
+            if (accessToken) {
+                storageService.setTokens(accessToken, refreshToken);
                 navigation.navigate('ToDoList');
             } else {
                 Alert.alert("Success", "Verified successfully!");
-                navigation.navigate('ToDoList'); // Assuming success means logged in
+                navigation.navigate('ToDoList');
             }
         } catch (error: any) {
             const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || "Invalid OTP";

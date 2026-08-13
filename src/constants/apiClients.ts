@@ -5,6 +5,7 @@ export const endPoints = {
     login: "auth/login",
     signup: "auth/signup",
     logout: "auth/logout",
+    refresh: "auth/refresh",
     todos: "todos",
     sendOtp: "auth/send-otp",
     verifyOtp: "auth/verify-otp"
