@@ -11,6 +11,7 @@ import { useStripe } from '@stripe/stripe-react-native';
 import Purchases from 'react-native-purchases';
 import { useTodos, useSaveTodoMutation, useDeleteTodoMutation, Todo } from '../hooks/useTodos';
 import biometricService from '../services/biometricService';
+import { useAppTheme } from '../context/ThemeContext';
 
 const storage = createMMKV();
 
@@ -30,6 +31,7 @@ const ToDoList = ({ navigation }: any) => {
 
     const { t, i18n } = useTranslation();
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
+    const { themeMode, setThemeMode, paperTheme, isDark } = useAppTheme();
 
     // TanStack Query Hooks
     const { data: todos = [], isLoading, isFetching, refetch } = useTodos(page);
@@ -326,6 +328,22 @@ const ToDoList = ({ navigation }: any) => {
                         title="✍️ Signed Documents"
                     />
                     <Divider />
+                    <Menu.Item
+                        onPress={() => { setThemeMode('light'); setIsMenuVisible(false); }}
+                        title="☀️ Light Mode"
+                        leadingIcon={themeMode === 'light' ? 'check' : undefined}
+                    />
+                    <Menu.Item
+                        onPress={() => { setThemeMode('dark'); setIsMenuVisible(false); }}
+                        title="🌙 Dark Mode"
+                        leadingIcon={themeMode === 'dark' ? 'check' : undefined}
+                    />
+                    <Menu.Item
+                        onPress={() => { setThemeMode('system'); setIsMenuVisible(false); }}
+                        title="⚙️ System Mode"
+                        leadingIcon={themeMode === 'system' ? 'check' : undefined}
+                    />
+                    <Divider />
                 </Menu>
             </View>
 
@@ -339,7 +357,7 @@ const ToDoList = ({ navigation }: any) => {
             </View>
 
             <Portal>
-                <Modal visible={isAddModalVisible} onDismiss={hideModal} contentContainerStyle={styles.modalContent}>
+                <Modal visible={isAddModalVisible} onDismiss={hideModal} contentContainerStyle={[styles.modalContent, { backgroundColor: paperTheme.colors.surface }]}>
                     <Text variant="titleLarge" style={{ marginBottom: 16 }}>
                         {editingTodoId ? t('edit_task') : t('add_new_task')}
                     </Text>
@@ -390,7 +408,7 @@ const ToDoList = ({ navigation }: any) => {
                     </View>
                 </Modal>
 
-                <Modal visible={isPaywallVisible} onDismiss={() => setIsPaywallVisible(false)} contentContainerStyle={styles.modalContent}>
+                <Modal visible={isPaywallVisible} onDismiss={() => setIsPaywallVisible(false)} contentContainerStyle={[styles.modalContent, { backgroundColor: paperTheme.colors.surface }]}>
                     <Text variant="headlineSmall" style={{ textAlign: 'center', marginBottom: 20, fontWeight: 'bold' }}>
                         💎 Upgrade to Pro
                     </Text>
@@ -432,7 +450,7 @@ const ToDoList = ({ navigation }: any) => {
                         <Text style={{ textAlign: 'center', margin: 20, color: 'gray' }}>No tasks found</Text>
                     }
                     renderItem={({ item }) => (
-                        <Card style={styles.card}>
+                        <Card style={[styles.card, { backgroundColor: isDark ? paperTheme.colors.surfaceVariant : '#f0f4f8' }]}>
                             <Card.Title
                                 title={item.title || item.name || "Untitled"}
                                 right={(props) => (
@@ -517,7 +535,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
     },
     modalContent: {
-        backgroundColor: 'white',
         padding: 20,
         margin: 20,
         borderRadius: 8,
@@ -527,7 +544,6 @@ const styles = StyleSheet.create({
     },
     card: {
         marginBottom: 10,
-        backgroundColor: '#dce3de'
     },
     fab: {
         position: 'absolute',
