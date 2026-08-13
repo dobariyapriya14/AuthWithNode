@@ -21,12 +21,15 @@ import notifee, { AndroidImportance } from '@notifee/react-native';
 import { useEffect } from 'react';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import DigitalSignature from './src/screens/DigitalSignature';
+import AnimatedScreen from './src/screens/AnimatedScreen';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import SignatureView from 'react-native-signature-canvas';
 
 const storage = createMMKV();
 
 const Stack = createNativeStackNavigator();
 
-function App() {
+const App = () => {
   const isDarkMode = useColorScheme() === 'dark';
   const hasToken = storage.getString("accessToken");
 
@@ -95,9 +98,10 @@ function App() {
     //     </PaperProvider>
     //   </SafeAreaProvider>
     // </StripeProvider>
-    <>
-      <DigitalSignature />
-    </>
+    // <SignatureView/>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AnimatedScreen />
+    </GestureHandlerRootView>
   );
 }
 

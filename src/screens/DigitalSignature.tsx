@@ -145,7 +145,6 @@ const DigitalSignature = () => {
                 />
             </View>
 
-
             {/* Buttons */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 30 }}>
                 <View style={{ width: '45%' }}>

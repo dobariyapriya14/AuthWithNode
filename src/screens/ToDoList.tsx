@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, Platform, StyleSheet, Alert, TouchableOpacity, Linking, Switch } from 'react-native';
+import { View, FlatList, Platform, StyleSheet, Alert, TouchableOpacity, Switch } from 'react-native';
 import { Text, TextInput, Button, Card, ActivityIndicator, FAB, Portal, Modal, Menu, Divider } from 'react-native-paper';
 import { createMMKV } from 'react-native-mmkv';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';

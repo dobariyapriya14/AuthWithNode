@@ -1,0 +1,78 @@
+diff --git a/node_modules/react-native/.gradle/9.2.0/checksums/checksums.lock b/node_modules/react-native/.gradle/9.2.0/checksums/checksums.lock
+new file mode 100644
+index 0000000..98d3f15
+Binary files /dev/null and b/node_modules/react-native/.gradle/9.2.0/checksums/checksums.lock differ
+diff --git a/node_modules/react-native/.gradle/9.2.0/fileChanges/last-build.bin b/node_modules/react-native/.gradle/9.2.0/fileChanges/last-build.bin
+new file mode 100644
+index 0000000..f76dd23
+Binary files /dev/null and b/node_modules/react-native/.gradle/9.2.0/fileChanges/last-build.bin differ
+diff --git a/node_modules/react-native/.gradle/9.2.0/fileHashes/fileHashes.bin b/node_modules/react-native/.gradle/9.2.0/fileHashes/fileHashes.bin
+new file mode 100644
+index 0000000..0f05149
+Binary files /dev/null and b/node_modules/react-native/.gradle/9.2.0/fileHashes/fileHashes.bin differ
+diff --git a/node_modules/react-native/.gradle/9.2.0/fileHashes/fileHashes.lock b/node_modules/react-native/.gradle/9.2.0/fileHashes/fileHashes.lock
+new file mode 100644
+index 0000000..34af17c
+Binary files /dev/null and b/node_modules/react-native/.gradle/9.2.0/fileHashes/fileHashes.lock differ
+diff --git a/node_modules/react-native/.gradle/9.2.0/gc.properties b/node_modules/react-native/.gradle/9.2.0/gc.properties
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/react-native/.gradle/buildOutputCleanup/buildOutputCleanup.lock b/node_modules/react-native/.gradle/buildOutputCleanup/buildOutputCleanup.lock
+new file mode 100644
+index 0000000..e74560a
+Binary files /dev/null and b/node_modules/react-native/.gradle/buildOutputCleanup/buildOutputCleanup.lock differ
+diff --git a/node_modules/react-native/.gradle/buildOutputCleanup/cache.properties b/node_modules/react-native/.gradle/buildOutputCleanup/cache.properties
+new file mode 100644
+index 0000000..78c487e
+--- /dev/null
++++ b/node_modules/react-native/.gradle/buildOutputCleanup/cache.properties
+@@ -0,0 +1,2 @@
++#Thu Aug 13 10:37:07 IST 2026
++gradle.version=9.2.0
+diff --git a/node_modules/react-native/.gradle/vcs-1/gc.properties b/node_modules/react-native/.gradle/vcs-1/gc.properties
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/react-native/scripts/cocoapods/rncore.rb b/node_modules/react-native/scripts/cocoapods/rncore.rb
+index 597c4b4..468c2cf 100644
+--- a/node_modules/react-native/scripts/cocoapods/rncore.rb
++++ b/node_modules/react-native/scripts/cocoapods/rncore.rb
+@@ -143,7 +143,7 @@ class ReactNativeCoreUtils
+         rncore_log("  #{Pathname.new(destinationDebug).relative_path_from(Pathname.pwd).to_s}")
+         rncore_log("  #{Pathname.new(destinationRelease).relative_path_from(Pathname.pwd).to_s}")
+ 
+-        return {:http => URI::File.build(path: destinationDebug).to_s }
++        return {:http => URI::File.build(path: URI::DEFAULT_PARSER.escape(destinationDebug)).to_s }
+     end
+ 
+     def self.podspec_source_download_prebuilt_nightly_tarball()
+@@ -179,7 +179,7 @@ class ReactNativeCoreUtils
+         rncore_log("Resolved nightly ReactNativeCore-prebuilt version:")
+         rncore_log("  #{Pathname.new(destinationDebug).relative_path_from(Pathname.pwd).to_s}")
+         rncore_log("  #{Pathname.new(destinationRelease).relative_path_from(Pathname.pwd).to_s}")
+-        return {:http => URI::File.build(path: destinationDebug).to_s }
++        return {:http => URI::File.build(path: URI::DEFAULT_PARSER.escape(destinationDebug)).to_s }
+     end
+ 
+     def self.process_dsyms(frameworkTarball, dSymsTarball)
+diff --git a/node_modules/react-native/scripts/cocoapods/rndependencies.rb b/node_modules/react-native/scripts/cocoapods/rndependencies.rb
+index a901840..d952a6c 100644
+--- a/node_modules/react-native/scripts/cocoapods/rndependencies.rb
++++ b/node_modules/react-native/scripts/cocoapods/rndependencies.rb
+@@ -161,7 +161,7 @@ class ReactNativeDependenciesUtils
+         destinationDebug = download_stable_rndeps(@@react_native_path, @@react_native_version, :debug)
+         download_stable_rndeps(@@react_native_path, @@react_native_version, :release)
+ 
+-        return {:http => URI::File.build(path: destinationDebug).to_s }
++        return {:http => URI::File.build(path: URI::DEFAULT_PARSER.escape(destinationDebug)).to_s }
+     end
+ 
+     def self.release_tarball_url(version, build_type)
+@@ -228,7 +228,7 @@ class ReactNativeDependenciesUtils
+         destinationDebug = download_nightly_rndeps(@@react_native_path, @@react_native_version, :debug)
+         download_nightly_rndeps(@@react_native_path, @@react_native_version, :release)
+ 
+-        return {:http => URI::File.build(path: destinationDebug).to_s }
++        return {:http => URI::File.build(path: URI::DEFAULT_PARSER.escape(destinationDebug)).to_s }
+         return {:http => url}
+     end
+ 
