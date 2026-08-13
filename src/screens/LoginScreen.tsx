@@ -6,6 +6,7 @@ import { changeLanguage } from '../i18n';
 import { createMMKV } from 'react-native-mmkv';
 import { storageService } from '../services/storageService';
 import { apiService } from '../services/apiService';
+import { useAppTheme } from '../context/ThemeContext';
 
 const storage = createMMKV();
 
@@ -14,6 +15,7 @@ const LoginScreen = ({ navigation }: any) => {
     const [isOtpMode, setIsOtpMode] = React.useState(false);
     const [isMenuVisible, setIsMenuVisible] = React.useState(false);
     const { t, i18n } = useTranslation();
+    const { themeMode, setThemeMode } = useAppTheme();
     const [otpSent, setOtpSent] = React.useState(false);
     const [otp, setOtp] = React.useState('');
     const [name, setName] = React.useState('');
@@ -116,6 +118,22 @@ const LoginScreen = ({ navigation }: any) => {
                         onPress={() => { changeLanguage('fr'); setIsMenuVisible(false); }} 
                         title={t('French')} 
                         leadingIcon={i18n.language === 'fr' ? 'check' : undefined}
+                    />
+                    <Divider />
+                    <Menu.Item
+                        onPress={() => { setThemeMode('light'); setIsMenuVisible(false); }}
+                        title="☀️ Light Mode"
+                        leadingIcon={themeMode === 'light' ? 'check' : undefined}
+                    />
+                    <Menu.Item
+                        onPress={() => { setThemeMode('dark'); setIsMenuVisible(false); }}
+                        title="🌙 Dark Mode"
+                        leadingIcon={themeMode === 'dark' ? 'check' : undefined}
+                    />
+                    <Menu.Item
+                        onPress={() => { setThemeMode('system'); setIsMenuVisible(false); }}
+                        title="⚙️ System Mode"
+                        leadingIcon={themeMode === 'system' ? 'check' : undefined}
                     />
                 </Menu>
             </View>
