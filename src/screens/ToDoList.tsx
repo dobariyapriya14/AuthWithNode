@@ -4,49 +4,49 @@ import { Text, TextInput, Button, Card, ActivityIndicator, FAB, Portal, Modal, M
 import { createMMKV } from 'react-native-mmkv';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import apiService from '../services/apiService';
-import offlineService from '../services/offlineService';
 import NetInfo from '@react-native-community/netinfo';
 import { useTranslation } from 'react-i18next';
 import { changeLanguage } from '../i18n';
 import { useStripe } from '@stripe/stripe-react-native';
 import Purchases from 'react-native-purchases';
+import { useTodos, useSaveTodoMutation, useDeleteTodoMutation, Todo } from '../hooks/useTodos';
 
 const storage = createMMKV();
-interface Todo {
-    _id?: string;
-    id?: string;
-    title?: string;
-    name?: string;
-    completed?: boolean;
-    description?: string;
-    image?: string;
-    pdf?: string;
-    mode?: boolean;
-}
 
 const ToDoList = ({ navigation }: any) => {
-    const [todos, setTodos] = useState<Todo[]>([]);
-    const [loading, setLoading] = useState(false);
     const [isAddModalVisible, setIsAddModalVisible] = useState(false);
     const [newTitle, setNewTitle] = useState('');
     const [newDescription, setNewDescription] = useState('');
     const [newImage, setNewImage] = useState<any>(null);
     const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
     const [page, setPage] = useState(1);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [hasMore, setHasMore] = useState(true);
     const [newMode, setNewMode] = useState<boolean>(true);
     const [isOffline, setIsOffline] = useState(false);
     const [isMenuVisible, setIsMenuVisible] = useState(false);
     const [offerings, setOfferings] = useState<any>(null);
     const [isPaywallVisible, setIsPaywallVisible] = useState(false);
+    const [stripeLoading, setStripeLoading] = useState(false);
+
     const { t, i18n } = useTranslation();
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
+
+    // TanStack Query Hooks
+    const { data: todos = [], isLoading, isFetching, refetch } = useTodos(page);
+    const saveTodoMutation = useSaveTodoMutation();
+    const deleteTodoMutation = useDeleteTodoMutation();
 
     useEffect(() => {
         Purchases.configure({
             apiKey: "test_EuPBCcDfGZCmdkUWONqLbrxFwOx",
         });
+    }, []);
+
+    useEffect(() => {
+        // Network connectivity status listener
+        const unsubscribe = NetInfo.addEventListener(state => {
+            setIsOffline(!state.isConnected);
+        });
+        return () => unsubscribe();
     }, []);
 
     const fetchPaymentSheetParams = async () => {
@@ -61,7 +61,7 @@ const ToDoList = ({ navigation }: any) => {
 
     const initializePaymentSheet = async () => {
         try {
-            setLoading(true);
+            setStripeLoading(true);
             const clientSecret = await fetchPaymentSheetParams();
 
             const { error } = await initPaymentSheet({
@@ -77,7 +77,7 @@ const ToDoList = ({ navigation }: any) => {
         } catch (error: any) {
             Alert.alert("Error", "Failed to initialize payment");
         } finally {
-            setLoading(false);
+            setStripeLoading(false);
         }
     };
 
@@ -93,7 +93,7 @@ const ToDoList = ({ navigation }: any) => {
 
     const handleRevenueClick = async () => {
         try {
-            setLoading(true);
+            setStripeLoading(true);
             const offeringsData = await Purchases.getOfferings();
             if (offeringsData.current !== null && offeringsData.current.availablePackages.length !== 0) {
                 setOfferings(offeringsData.current);
@@ -104,13 +104,13 @@ const ToDoList = ({ navigation }: any) => {
         } catch (error: any) {
             Alert.alert("Error", error.message || "Failed to fetch offerings");
         } finally {
-            setLoading(false);
+            setStripeLoading(false);
         }
     };
 
     const handlePurchase = async (pkg: any) => {
         try {
-            setLoading(true);
+            setStripeLoading(true);
             const { customerInfo } = await Purchases.purchasePackage(pkg);
             if (typeof customerInfo.entitlements.active['pro'] !== "undefined") {
                 Alert.alert("Success", "You are now a PRO user!");
@@ -121,33 +121,9 @@ const ToDoList = ({ navigation }: any) => {
                 Alert.alert("Error", e.message);
             }
         } finally {
-            setLoading(false);
+            setStripeLoading(false);
         }
     };
-
-    useEffect(() => {
-        // Initial fetch from cache for faster startup
-        const cachedTodos = offlineService.getTodosCache();
-        if (cachedTodos.length > 0) {
-            setTodos(cachedTodos);
-        }
-
-        // Network status listener
-        const unsubscribe = NetInfo.addEventListener(state => {
-            const wasOffline = isOffline;
-            const nowOffline = !state.isConnected;
-            setIsOffline(nowOffline);
-
-            if (wasOffline && !nowOffline) {
-                // Back online! Sync pending changes
-                offlineService.syncPendingMutations().then(() => fetchTodos(1));
-            }
-        });
-
-        fetchTodos(1);
-
-        return () => unsubscribe();
-    }, []);
 
     const handleLogout = async () => {
         try {
@@ -160,63 +136,6 @@ const ToDoList = ({ navigation }: any) => {
         } finally {
             storage.remove("accessToken");
             navigation.replace('LoginScreen');
-        }
-    };
-
-    const fetchTodos = async (pageNumber: number = 1) => {
-        if (pageNumber === 1) {
-            setLoading(true);
-        } else {
-            setLoadingMore(true);
-        }
-
-        try {
-            const state = await NetInfo.fetch();
-            if (!state.isConnected) {
-                // Offline mode: Use cache
-                if (pageNumber === 1) {
-                    const cachedTodos = offlineService.getTodosCache();
-                    setTodos(cachedTodos);
-                    setHasMore(false);
-                }
-                return;
-            }
-
-            const res = await apiService.getTodos(pageNumber);
-            const data = res.data;
-
-            let todosArray = [];
-            if (Array.isArray(data)) {
-                todosArray = data;
-            } else if (data && Array.isArray(data.todos)) {
-                todosArray = data.todos;
-            } else if (data && Array.isArray(data.data)) {
-                todosArray = data.data;
-            }
-
-            if (pageNumber === 1) {
-                setTodos(todosArray);
-                offlineService.setTodosCache(todosArray); // Update cache
-            } else {
-                setTodos(prev => [...prev, ...todosArray]);
-            }
-            setPage(pageNumber);
-            if (todosArray.length === 0) setHasMore(false);
-        } catch (error: any) {
-            console.log("API ERROR:", error?.response?.data || error.message);
-            // On error, try to fallback to cache if page 1
-            if (pageNumber === 1) {
-                setTodos(offlineService.getTodosCache());
-            }
-        } finally {
-            setLoading(false);
-            setLoadingMore(false);
-        }
-    };
-
-    const loadMoreTodos = () => {
-        if (!loadingMore && !loading && hasMore) {
-            fetchTodos(page + 1);
         }
     };
 
@@ -283,7 +202,6 @@ const ToDoList = ({ navigation }: any) => {
             return;
         }
 
-        // Optimistic UI update
         const id = editingTodoId || "temp_" + Date.now();
         const optimisticTodo: Todo = {
             _id: id,
@@ -294,75 +212,40 @@ const ToDoList = ({ navigation }: any) => {
             image: typeof newImage === 'string' ? newImage : newImage?.uri,
         };
 
-        if (editingTodoId) {
-            setTodos(prev => prev.map(t => (t._id === editingTodoId || t.id === editingTodoId) ? optimisticTodo : t));
-        } else {
-            setTodos(prev => [optimisticTodo, ...prev]);
+        const formData = new FormData();
+        formData.append("title", newTitle);
+        formData.append("mode", String(newMode));
+        if (newDescription) formData.append("description", newDescription);
+
+        if (newImage && newImage.uri) {
+            formData.append("image", {
+                uri: newImage.uri,
+                type: newImage.type || "image/jpeg",
+                name: newImage.fileName || "upload.jpg"
+            } as any);
         }
+
         hideModal();
 
         try {
-            const state = await NetInfo.fetch();
-            if (!state.isConnected) {
-                // Queue mutation for later
-                offlineService.addMutationToQueue({
-                    type: editingTodoId ? 'UPDATE' : 'ADD',
-                    data: { title: newTitle, description: newDescription, mode: newMode }, // Simple data for now
-                    targetId: editingTodoId || undefined
-                });
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append("title", newTitle);
-            formData.append("mode", String(newMode));
-            if (newDescription) formData.append("description", newDescription);
-
-            if (newImage && newImage.uri) {
-                formData.append("image", {
-                    uri: newImage.uri,
-                    type: newImage.type || "image/jpeg",
-                    name: newImage.fileName || "upload.jpg"
-                } as any);
-            }
-
-            await apiService.saveTodo(formData, editingTodoId);
-            fetchTodos(1); // Refresh to get real IDs and data
+            await saveTodoMutation.mutateAsync({
+                formData,
+                editingTodoId,
+                optimisticTodo,
+            });
         } catch (error: any) {
             console.log("SAVE ERROR:", error?.message || error);
-            // On failure, if we're not actually offline, we should probably rollback or notify
-            Alert.alert("Notice", "Task saved locally. It will sync when connection is stable.");
-            offlineService.addMutationToQueue({
-                type: editingTodoId ? 'UPDATE' : 'ADD',
-                data: { title: newTitle, description: newDescription, mode: newMode },
-                targetId: editingTodoId || undefined
-            });
+            Alert.alert("Notice", "Operation will sync when online connection is restored.");
         }
     };
 
     const deleteTodo = async (id: string | undefined) => {
         if (!id) return;
-
-        // Optimistic UI update
-        setTodos(prev => prev.filter(t => t._id !== id && t.id !== id));
-
         try {
-            const state = await NetInfo.fetch();
-            if (!state.isConnected) {
-                offlineService.addMutationToQueue({
-                    type: 'DELETE',
-                    targetId: id
-                });
-                return;
-            }
-            await apiService.deleteTodo(id);
+            await deleteTodoMutation.mutateAsync(id);
         } catch (error: any) {
             console.log("DELETE ERROR:", error?.message || error);
-            // Fallback to queue if it failed due to connectivity
-            offlineService.addMutationToQueue({
-                type: 'DELETE',
-                targetId: id
-            });
+            Alert.alert("Error", "Failed to delete todo");
         }
     };
 
@@ -370,7 +253,7 @@ const ToDoList = ({ navigation }: any) => {
         <View style={styles.container}>
             {isOffline && (
                 <View style={styles.offlineBanner}>
-                    <Text style={styles.offlineText}>You are currently offline. Changes will sync later.</Text>
+                    <Text style={styles.offlineText}>You are currently offline. Cached data loaded & updates will sync later.</Text>
                 </View>
             )}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -494,18 +377,17 @@ const ToDoList = ({ navigation }: any) => {
                 </Modal>
             </Portal>
 
-            {loading && page === 1 ? (
+            {isLoading ? (
                 <ActivityIndicator size="large" style={{ marginTop: 20 }} />
             ) : (
                 <FlatList
                     data={todos}
                     keyExtractor={(item, index) => item._id?.toString() || item.id?.toString() || index.toString()}
-                    onEndReached={loadMoreTodos}
-                    onEndReachedThreshold={0.5}
+                    refreshing={isFetching}
+                    onRefresh={refetch}
                     contentContainerStyle={{ paddingBottom: 80 }}
-                    ListFooterComponent={
-                        loadingMore ? <ActivityIndicator style={{ margin: 10 }} /> :
-                            (!hasMore && todos.length > 0) ? <Text style={{ textAlign: 'center', margin: 10, color: 'gray' }}>No more tasks</Text> : null
+                    ListEmptyComponent={
+                        <Text style={{ textAlign: 'center', margin: 20, color: 'gray' }}>No tasks found</Text>
                     }
                     renderItem={({ item }) => (
                         <Card style={styles.card}>
@@ -551,6 +433,7 @@ const ToDoList = ({ navigation }: any) => {
                                     mode="contained-tonal"
                                     onPress={initializePaymentSheet}
                                     style={{ marginLeft: 8 }}
+                                    loading={stripeLoading}
                                 >
                                     Buy Now
                                 </Button>

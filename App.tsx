@@ -23,7 +23,8 @@ import { StripeProvider } from '@stripe/stripe-react-native';
 import DigitalSignature from './src/screens/DigitalSignature';
 import AnimatedScreen from './src/screens/AnimatedScreen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import SignatureView from 'react-native-signature-canvas';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { queryClient, clientPersister } from './src/services/queryClient';
 
 const storage = createMMKV();
 
@@ -77,31 +78,41 @@ const App = () => {
   }, []);
 
   return (
-    // <StripeProvider publishableKey="pk_test_51TBYJ9QNh8SDUnEiEtP4jvCHB9sQisRomDLDl0SkepHgjqA5ezJV9mVtkgbbjZqtbWE3ztGEONF0A1sZXIJukAx100FjKK3STp">
-    //   <SafeAreaProvider>
-    //     <PaperProvider>
-    //       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-    //       <NavigationContainer>
-    //         <Stack.Navigator initialRouteName={hasToken ? "ToDoList" : "LoginScreen"}>
-    //           <Stack.Screen
-    //             name="LoginScreen"
-    //             component={LoginScreen}
-    //             options={{ headerShown: false }}
-    //           />
-    //           <Stack.Screen
-    //             name="ToDoList"
-    //             component={ToDoList}
-    //             options={{ title: 'My Tasks', headerShown: false }}
-    //           />
-    //         </Stack.Navigator>
-    //       </NavigationContainer>
-    //     </PaperProvider>
-    //   </SafeAreaProvider>
-    // </StripeProvider>
-    // <SignatureView/>
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <AnimatedScreen />
-    </GestureHandlerRootView>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: clientPersister }}>
+      <GestureHandlerRootView style={styles.container}>
+        <StripeProvider publishableKey="pk_test_51TBYJ9QNh8SDUnEiEtP4jvCHB9sQisRomDLDl0SkepHgjqA5ezJV9mVtkgbbjZqtbWE3ztGEONF0A1sZXIJukAx100FjKK3STp">
+          <SafeAreaProvider>
+            <PaperProvider>
+              <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+              <NavigationContainer>
+                <Stack.Navigator initialRouteName={hasToken ? "ToDoList" : "LoginScreen"}>
+                  <Stack.Screen
+                    name="LoginScreen"
+                    component={LoginScreen}
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="ToDoList"
+                    component={ToDoList}
+                    options={{ title: 'My Tasks', headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="AnimatedScreen"
+                    component={AnimatedScreen}
+                    options={{ title: 'Animations' }}
+                  />
+                  <Stack.Screen
+                    name="DigitalSignature"
+                    component={DigitalSignature}
+                    options={{ title: 'Digital Signature' }}
+                  />
+                </Stack.Navigator>
+              </NavigationContainer>
+            </PaperProvider>
+          </SafeAreaProvider>
+        </StripeProvider>
+      </GestureHandlerRootView>
+    </PersistQueryClientProvider>
   );
 }
 
