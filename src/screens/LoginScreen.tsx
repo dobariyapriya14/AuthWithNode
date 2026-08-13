@@ -35,7 +35,7 @@ const LoginScreen = ({ navigation }: any) => {
                 Alert.alert("Login Error", "accessToken was not received from server");
             }
         } catch (error: any) {
-            const errorMsg = error.response?.data?.message || "Something went wrong";
+            const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || "Something went wrong";
             Alert.alert("Login Failed", errorMsg);
         }
     };
@@ -46,7 +46,7 @@ const LoginScreen = ({ navigation }: any) => {
             Alert.alert("Success", "Account created! Please login.");
             setIsLogin(true); // Switch to login mode
         } catch (error: any) {
-            const errorMsg = error.response?.data?.message || "Something went wrong";
+            const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || "Cannot connect to server. Is your backend running on port 3000?";
             Alert.alert("Signup Failed", errorMsg);
         }
     };
@@ -63,7 +63,7 @@ const LoginScreen = ({ navigation }: any) => {
             Alert.alert("Success", `OTP Sent: ${data?.otp || 'Check your email'}`);
             setOtpSent(true);
         } catch (error: any) {
-            const errorMsg = error.response?.data?.message || "Failed to send OTP";
+            const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || "Failed to send OTP";
             Alert.alert("Error", errorMsg);
         }
     };
@@ -85,7 +85,7 @@ const LoginScreen = ({ navigation }: any) => {
                 navigation.navigate('ToDoList'); // Assuming success means logged in
             }
         } catch (error: any) {
-            const errorMsg = error.response?.data?.message || "Invalid OTP";
+            const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || "Invalid OTP";
             Alert.alert("Error", errorMsg);
         }
     };
