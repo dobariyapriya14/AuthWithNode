@@ -12,6 +12,8 @@ import Purchases from 'react-native-purchases';
 import { useTodos, useSaveTodoMutation, useDeleteTodoMutation, Todo } from '../hooks/useTodos';
 import biometricService from '../services/biometricService';
 import { useAppTheme } from '../context/ThemeContext';
+import LocationPickerModal from '../components/LocationPickerModal';
+import useUserLocation from '../hooks/useUserLocation';
 
 const storage = createMMKV();
 
@@ -28,6 +30,10 @@ const ToDoList = ({ navigation }: any) => {
     const [offerings, setOfferings] = useState<any>(null);
     const [isPaywallVisible, setIsPaywallVisible] = useState(false);
     const [stripeLoading, setStripeLoading] = useState(false);
+    const [newLocation, setNewLocation] = useState<{ latitude: number; longitude: number; address?: string } | null>(null);
+    const [isLocationPickerVisible, setIsLocationPickerVisible] = useState(false);
+
+    const { location: currentLocation } = useUserLocation();
 
     const { t, i18n } = useTranslation();
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
@@ -167,6 +173,7 @@ const ToDoList = ({ navigation }: any) => {
         setNewTitle('');
         setNewDescription('');
         setNewImage(null);
+        setNewLocation(null);
         setNewMode(true);
         setIsAddModalVisible(true);
     };
@@ -177,6 +184,7 @@ const ToDoList = ({ navigation }: any) => {
         setNewTitle('');
         setNewDescription('');
         setNewImage(null);
+        setNewLocation(null);
         setNewMode(true);
     };
 
@@ -233,12 +241,18 @@ const ToDoList = ({ navigation }: any) => {
             mode: newMode,
             completed: false,
             image: typeof newImage === 'string' ? newImage : newImage?.uri,
+            latitude: newLocation?.latitude,
+            longitude: newLocation?.longitude,
+            address: newLocation?.address,
         };
 
         const formData = new FormData();
         formData.append("title", newTitle);
         formData.append("mode", String(newMode));
         if (newDescription) formData.append("description", newDescription);
+        if (newLocation?.latitude) formData.append("latitude", String(newLocation.latitude));
+        if (newLocation?.longitude) formData.append("longitude", String(newLocation.longitude));
+        if (newLocation?.address) formData.append("address", newLocation.address);
 
         if (newImage && newImage.uri) {
             formData.append("image", {
@@ -323,6 +337,14 @@ const ToDoList = ({ navigation }: any) => {
                     <Menu.Item
                         onPress={() => {
                             setIsMenuVisible(false);
+                            navigation.navigate('TaskMapScreen');
+                        }}
+                        title="🗺️ Task Map View"
+                    />
+                    <Divider />
+                    <Menu.Item
+                        onPress={() => {
+                            setIsMenuVisible(false);
                             navigation.navigate('DigitalSignature');
                         }}
                         title="✍️ Signed Documents"
@@ -348,10 +370,18 @@ const ToDoList = ({ navigation }: any) => {
             </View>
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
-                <Button mode="contained" onPress={showModal} style={{ flex: 1, marginRight: 8 }}>
+                <Button mode="contained" onPress={showModal} style={{ flex: 1, marginRight: 4 }}>
                     {t('add_todo')}
                 </Button>
-                <Button mode="contained" onPress={handleRevenueClick} style={{ flex: 1, marginLeft: 8 }} icon="currency-usd">
+                <Button
+                    mode="contained-tonal"
+                    onPress={() => navigation.navigate('TaskMapScreen')}
+                    style={{ flex: 1, marginHorizontal: 4 }}
+                    icon={({ size, color }) => <Text style={{ fontSize: 16 }}>🗺️</Text>}
+                >
+                    Map View
+                </Button>
+                <Button mode="contained" onPress={handleRevenueClick} style={{ flex: 1, marginLeft: 4 }} icon="currency-usd">
                     Revenue
                 </Button>
             </View>
@@ -380,14 +410,31 @@ const ToDoList = ({ navigation }: any) => {
                         style={{ marginBottom: 12 }}
                     />
 
-                    <Button
-                        mode="outlined"
-                        onPress={handleImageUpload}
-                        style={{ marginBottom: 12 }}
-                        icon={({ size, color }) => <Text style={{ fontSize: 20, color }}>📷</Text>}
-                    >
-                        {newImage ? "Image Selected" : "Upload Image"}
-                    </Button>
+                    <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+                        <Button
+                            mode="outlined"
+                            onPress={handleImageUpload}
+                            style={{ flex: 1, marginRight: 4 }}
+                            icon={({ size, color }) => <Text style={{ fontSize: 18, color }}>📷</Text>}
+                        >
+                            {newImage ? "Image Attached" : "Upload Image"}
+                        </Button>
+
+                        <Button
+                            mode={newLocation ? "contained-tonal" : "outlined"}
+                            onPress={() => setIsLocationPickerVisible(true)}
+                            style={{ flex: 1, marginLeft: 4 }}
+                            icon={({ size, color }) => <Text style={{ fontSize: 18, color }}>📍</Text>}
+                        >
+                            {newLocation ? "Location Set" : "Attach Location"}
+                        </Button>
+                    </View>
+
+                    {newLocation?.address ? (
+                        <Text variant="bodySmall" style={{ marginBottom: 12, color: paperTheme.colors.primary, fontWeight: 'bold' }}>
+                            📍 {newLocation.address}
+                        </Text>
+                    ) : null}
 
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -407,6 +454,16 @@ const ToDoList = ({ navigation }: any) => {
                         </View>
                     </View>
                 </Modal>
+
+                <LocationPickerModal
+                    visible={isLocationPickerVisible}
+                    initialLocation={newLocation}
+                    currentLocation={currentLocation}
+                    onDismiss={() => setIsLocationPickerVisible(false)}
+                    onSelectLocation={(loc) => {
+                        setNewLocation(loc);
+                    }}
+                />
 
                 <Modal visible={isPaywallVisible} onDismiss={() => setIsPaywallVisible(false)} contentContainerStyle={[styles.modalContent, { backgroundColor: paperTheme.colors.surface }]}>
                     <Text variant="headlineSmall" style={{ textAlign: 'center', marginBottom: 20, fontWeight: 'bold' }}>
@@ -461,6 +518,15 @@ const ToDoList = ({ navigation }: any) => {
                                                 setNewTitle(item.title || item.name || "");
                                                 setNewDescription(item.description || "");
                                                 setNewImage(item.image || "");
+                                                if (typeof item.latitude === 'number' && typeof item.longitude === 'number') {
+                                                    setNewLocation({
+                                                        latitude: item.latitude,
+                                                        longitude: item.longitude,
+                                                        address: item.address,
+                                                    });
+                                                } else {
+                                                    setNewLocation(null);
+                                                }
                                                 setNewMode(item.mode !== undefined ? item.mode : true);
                                                 setIsAddModalVisible(true);
                                             }}
@@ -477,9 +543,14 @@ const ToDoList = ({ navigation }: any) => {
                                     </View>
                                 )}
                             />
-                            {!!item.description && (
+                            {(!!item.description || (typeof item.latitude === 'number' && typeof item.longitude === 'number')) && (
                                 <Card.Content>
-                                    <Text variant="bodyMedium">{item.description}</Text>
+                                    {!!item.description && <Text variant="bodyMedium">{item.description}</Text>}
+                                    {typeof item.latitude === 'number' && typeof item.longitude === 'number' && (
+                                        <Text variant="bodySmall" style={{ color: paperTheme.colors.primary, marginTop: 4, fontWeight: '500' }}>
+                                            📍 {item.address || `Lat: ${item.latitude.toFixed(4)}, Lng: ${item.longitude.toFixed(4)}`}
+                                        </Text>
+                                    )}
                                 </Card.Content>
                             )}
                             {!!item.image && (

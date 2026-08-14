@@ -3,12 +3,9 @@ import { Alert, View } from 'react-native';
 import { Button, Text, TextInput, Menu, Divider } from 'react-native-paper';
 import { useTranslation } from 'react-i18next';
 import { changeLanguage } from '../i18n';
-import { createMMKV } from 'react-native-mmkv';
 import { storageService } from '../services/storageService';
 import { apiService } from '../services/apiService';
 import { useAppTheme } from '../context/ThemeContext';
-
-const storage = createMMKV();
 
 const LoginScreen = ({ navigation }: any) => {
     const [isLogin, setIsLogin] = React.useState(true);

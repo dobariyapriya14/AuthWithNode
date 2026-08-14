@@ -112,6 +112,9 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
+    // Force location service version compatibility
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
     // ✅ Firebase BoM
     implementation(platform("com.google.firebase:firebase-bom:34.10.0"))
 
@@ -122,5 +125,14 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force "com.google.android.gms:play-services-location:21.3.0"
+        force "com.google.android.gms:play-services-base:18.5.0"
+        force "com.google.android.gms:play-services-basement:18.5.0"
+        force "com.google.android.gms:play-services-maps:19.0.0"
     }
 }
