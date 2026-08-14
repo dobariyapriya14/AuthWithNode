@@ -11,6 +11,9 @@ export interface Todo {
     image?: string;
     pdf?: string;
     mode?: boolean;
+    latitude?: number;
+    longitude?: number;
+    address?: string;
 }
 
 export const TODOS_QUERY_KEY = ['todos'];

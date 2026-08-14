@@ -13,6 +13,7 @@ import { useEffect } from 'react';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import DigitalSignature from './src/screens/DigitalSignature';
 import AnimatedScreen from './src/screens/AnimatedScreen';
+import TaskMapScreen from './src/screens/TaskMapScreen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { queryClient, clientPersister } from './src/services/queryClient';
@@ -42,6 +43,11 @@ const MainApp = () => {
             name="ToDoList"
             component={ToDoList}
             options={{ title: 'My Tasks', headerShown: false }}
+          />
+          <Stack.Screen
+            name="TaskMapScreen"
+            component={TaskMapScreen}
+            options={{ title: 'Task Map & Location' }}
           />
           <Stack.Screen
             name="AnimatedScreen"
