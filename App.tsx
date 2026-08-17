@@ -14,6 +14,8 @@ import { StripeProvider } from '@stripe/stripe-react-native';
 import DigitalSignature from './src/screens/DigitalSignature';
 import AnimatedScreen from './src/screens/AnimatedScreen';
 import TaskMapScreen from './src/screens/TaskMapScreen';
+import DocumentPdfScreen from './src/screens/DocumentPdfScreen';
+import ImageOptimizationScreen from './src/screens/ImageOptimizationScreen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { queryClient, clientPersister } from './src/services/queryClient';
@@ -58,6 +60,16 @@ const MainApp = () => {
             name="DigitalSignature"
             component={DigitalSignature}
             options={{ title: 'Digital Signature' }}
+          />
+          <Stack.Screen
+            name="DocumentPdfScreen"
+            component={DocumentPdfScreen}
+            options={{ title: '📄 Document & PDF Generator' }}
+          />
+          <Stack.Screen
+            name="ImageOptimizationScreen"
+            component={ImageOptimizationScreen}
+            options={{ title: '🖼️ Image Optimization Studio' }}
           />
         </Stack.Navigator>
       </NavigationContainer>

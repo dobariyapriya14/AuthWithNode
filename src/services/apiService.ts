@@ -148,6 +148,12 @@ export const apiService = {
 
     // Payment
     createPaymentIntent: (data: { amount: number }) => api.post('payment/create-intent', data),
+
+    // Document Generation & Image Optimization
+    generatePdf: (data: any) => api.post(endPoints.generatePdf, data),
+    exportTaskReport: (data: any) => api.post(endPoints.exportTaskReport, data),
+    optimizeImage: (data: any) => api.post(endPoints.optimizeImage, data),
+    downloadDocument: (filename: string) => api.get(`${endPoints.downloadDocument}/${filename}`, { responseType: 'blob' }),
 };
 
 export default apiService;
