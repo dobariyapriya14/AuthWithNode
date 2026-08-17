@@ -8,5 +8,9 @@ export const endPoints = {
     refresh: "auth/refresh",
     todos: "todos",
     sendOtp: "auth/send-otp",
-    verifyOtp: "auth/verify-otp"
+    verifyOtp: "auth/verify-otp",
+    generatePdf: "documents/generate-pdf",
+    exportTaskReport: "documents/export-task-report",
+    optimizeImage: "documents/optimize-image",
+    downloadDocument: "documents/download"
 }

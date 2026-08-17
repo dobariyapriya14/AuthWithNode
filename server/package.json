@@ -1,0 +1,16 @@
+{
+  "name": "node-document-service",
+  "version": "1.0.0",
+  "description": "Node.js Document Generation, PDF Export & Image Optimization Service",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "test": "node test-docs.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "pdfkit": "^0.15.0",
+    "multer": "^1.4.5-lts.1"
+  }
+}

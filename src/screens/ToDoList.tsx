@@ -351,6 +351,31 @@ const ToDoList = ({ navigation }: any) => {
                     />
                     <Divider />
                     <Menu.Item
+                        onPress={() => {
+                            setIsMenuVisible(false);
+                            navigation.navigate('DocumentPdfScreen');
+                        }}
+                        title="📄 Document Generator & PDF Export"
+                    />
+                    <Menu.Item
+                        onPress={() => {
+                            setIsMenuVisible(false);
+                            navigation.navigate('ImageOptimizationScreen');
+                        }}
+                        title="🖼️ Image Optimization Studio"
+                    />
+                    <Menu.Item
+                        onPress={async () => {
+                            setIsMenuVisible(false);
+                            navigation.navigate('DocumentPdfScreen', {
+                                initialTitle: 'My Task Management Report',
+                                includeTasks: true
+                            });
+                        }}
+                        title="📊 Export Tasks as PDF Report"
+                    />
+                    <Divider />
+                    <Menu.Item
                         onPress={() => { setThemeMode('light'); setIsMenuVisible(false); }}
                         title="☀️ Light Mode"
                         leadingIcon={themeMode === 'light' ? 'check' : undefined}
@@ -369,7 +394,7 @@ const ToDoList = ({ navigation }: any) => {
                 </Menu>
             </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+            <View style={styles.buttonRow}>
                 <Button mode="contained" onPress={showModal} style={{ flex: 1, marginRight: 4 }}>
                     {t('add_todo')}
                 </Button>
@@ -383,6 +408,25 @@ const ToDoList = ({ navigation }: any) => {
                 </Button>
                 <Button mode="contained" onPress={handleRevenueClick} style={{ flex: 1, marginLeft: 4 }} icon="currency-usd">
                     Revenue
+                </Button>
+            </View>
+
+            <View style={styles.buttonRowSecondary}>
+                <Button
+                    mode="outlined"
+                    onPress={() => navigation.navigate('DocumentPdfScreen')}
+                    style={{ flex: 1, marginRight: 4 }}
+                    icon={({ size, color }) => <Text style={{ fontSize: 16 }}>📄</Text>}
+                >
+                    PDF Generator
+                </Button>
+                <Button
+                    mode="outlined"
+                    onPress={() => navigation.navigate('ImageOptimizationScreen')}
+                    style={{ flex: 1, marginLeft: 4 }}
+                    icon={({ size, color }) => <Text style={{ fontSize: 16 }}>🖼️</Text>}
+                >
+                    Image Studio
                 </Button>
             </View>
 
@@ -592,6 +636,16 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 20,
         fontWeight: 'bold',
+    },
+    buttonRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+    buttonRowSecondary: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 20,
     },
     offlineBanner: {
         backgroundColor: '#ff9800',
