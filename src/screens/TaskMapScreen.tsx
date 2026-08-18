@@ -11,7 +11,7 @@ export const TaskMapScreen = ({ navigation: _navigation }: any) => {
     const mapRef = useRef<MapView | null>(null);
 
     // Fetch todos with TanStack Query
-    const { data: todos = [], isLoading: isTodosLoading, refetch } = useTodos(1);
+    const { data: todos = [] } = useTodos(1);
     const saveTodoMutation = useSaveTodoMutation();
 
     // Fetch user location

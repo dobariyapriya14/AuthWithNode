@@ -8,7 +8,6 @@ try {
 }
 
 const path = require('path');
-const fs = require('fs');
 const documentRoutes = require('./routes/documentRoutes');
 
 const PORT = process.env.PORT || 3000;
